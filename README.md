@@ -178,6 +178,127 @@ return response()->json(
 
 Register a class-string, an instance, or a closure. `Metric::get()` throws
 `RoundlyConsulting\Metrics\Exceptions\UnknownMetricException` for an unregistered key.
+`Metric::keys()` lists the registered keys without resolving them.
+
+## Dashboards (batch resolution)
+
+Resolve many registered metrics at once into a single keyed envelope, sharing one range
+(and, optionally, one timezone):
+
+```php
+use RoundlyConsulting\Metrics\Enums\Period;
+use RoundlyConsulting\Metrics\Facades\Metric;
+
+return Metric::dashboard(['users', 'revenue', 'churn'])
+    ->range(Period::ThisMonth)
+    ->toArray();
+// ['users' => [...envelope...], 'revenue' => [...], 'churn' => [...]]
+```
+
+The dashboard is `Responsable`, so a controller can `return Metric::dashboard([...])->range(...)`
+directly and get the JSON envelope.
+
+## Returning metrics from controllers
+
+Metrics and dashboards implement `Illuminate\Contracts\Support\Responsable`, so you can return
+one straight from a controller and get its JSON envelope — authorization stays your app's
+responsibility:
+
+```php
+public function show(string $key)
+{
+    return Metric::get($key)->range(request('period', 'TODAY'));
+}
+```
+
+## Comparison periods
+
+`Value` and `Progress` metrics expose period-over-period change. By default the comparison is
+the immediately-preceding window; `compareTo()` compares against any range instead:
+
+```php
+use RoundlyConsulting\Metrics\Enums\Period;
+
+Metric::value()
+    ->count(Order::query())
+    ->range(Period::ThisMonth)
+    ->compareTo(Period::LastYear)   // vs. the same metric a year ago
+    ->toArray();
+```
+
+## Top N partitions
+
+Cap a partition to its largest groups and roll the rest into a single bucket:
+
+```php
+Metric::partition()
+    ->count(User::query(), 'country')
+    ->limit(5)                       // 5 groups + "Other"
+    ->otherLabel('Elsewhere')        // optional; defaults to the translatable "Other"
+    ->toArray();
+```
+
+Map raw group keys to display labels with `labelUsing()` — raw keys stay available via the
+result's `keys()`, and the labels appear under a `labels` key:
+
+```php
+Metric::partition()
+    ->count(User::query(), 'country_id')
+    ->labelUsing(fn (int|string $key): string => Country::name($key))
+    ->toArray();
+// result => ['partitions' => ['1' => 40.0, ...], 'labels' => ['1' => 'Germany', ...]]
+```
+
+## Console commands
+
+Inspect your registered metrics from the CLI:
+
+```bash
+php artisan metrics:list              # every registered key and its class
+php artisan metrics:show users        # resolve "users" and print its envelope
+php artisan metrics:show users --range=MTD
+```
+
+## Events
+
+A `RoundlyConsulting\Metrics\Events\MetricCalculated` event fires every time a metric resolves —
+useful for instrumentation and slow-metric logging. It carries the registry `key` (null for
+ad-hoc metrics), the `range`, the `durationMs`, and whether it was served `fromCache`:
+
+```php
+use Illuminate\Support\Facades\Event;
+use RoundlyConsulting\Metrics\Events\MetricCalculated;
+
+Event::listen(function (MetricCalculated $event): void {
+    if ($event->durationMs > 500) {
+        logger()->warning("Slow metric [{$event->key}] took {$event->durationMs}ms");
+    }
+});
+```
+
+## Testing helper
+
+`Metric::fake()` swaps the registry for a recording fake so host-app tests can stub metric
+results and assert what was resolved — mirroring Laravel's `Http::fake()`:
+
+```php
+use RoundlyConsulting\Metrics\Facades\Metric;
+
+$fake = Metric::fake([
+    'active-users' => 1200,                  // a number becomes a value envelope
+    'revenue'      => ['value' => 5000.0],   // an array is used as the raw result
+]);
+
+// ...exercise the code under test...
+
+Metric::assertResolved('active-users');
+$fake->assertResolvedTimes('active-users', 1);
+$fake->assertNotResolved('revenue');
+$fake->assertNothingResolved();
+```
+
+Canned values may be a number, an array (raw result), a `Result`, or a full `Metrics`
+instance.
 
 ## Configuring a metric
 
@@ -195,6 +316,8 @@ All metric types:
 - `suffix(string $suffix)`
 - `precision(int $precision = 0, RoundingMode $mode = RoundingMode::HalfAwayFromZero)`
 - `range(Period|string $range, ?string $customRangeStart = null, ?string $customRangeEnd = null)`
+- `timezone(?string $timezone)` — resolve this metric's ranges in an explicit timezone,
+  overriding `config('metrics.timezone')` and the app timezone
 - `ranges(): array` — the list of available range keys/labels
 - `formatUsing(Closure(float): string $formatter)` — see [Number formatting](#number-formatting)
 - `cache()`, `cacheFor()`, `cacheKey()`, `dontCache()` — see [Caching](#caching)
@@ -202,6 +325,8 @@ All metric types:
 Value & Progress:
 
 - `withChangeAgainstPreviousPeriod(bool $withChange = true)`
+- `compareTo(Period|string $range, ?string $customRangeStart = null, ?string $customRangeEnd = null)` —
+  compare against an arbitrary range instead of the immediately-previous period (implies change)
 
 Progress:
 
@@ -212,6 +337,14 @@ Trend (unit helpers):
 
 - `unit(Unit|string $unit)` — a `Unit` case or `MINUTE`, `HOUR`, `DAY`, `WEEK`, `MONTH`, `YEAR`
 - `perMinute()`, `hourly()`, `daily()`, `weekly()`, `monthly()`, `yearly()`
+- `withoutGapFilling()` — return only buckets that have rows (see [Trend units](#trend-units))
+- `groupBy(string $column)` — split into multiple series (see [Trend units](#trend-units))
+
+Partition:
+
+- `limit(int $limit)` — cap to the top N groups, rolling the rest into an "Other" bucket
+- `otherLabel(string $label)` — override the "Other" bucket label
+- `labelUsing(Closure(int|string): string $resolver)` — map raw group keys to display labels
 
 > `precision()` takes PHP's native `RoundingMode` enum, e.g.
 > `->precision(2, RoundingMode::HalfEven)`.
@@ -288,6 +421,34 @@ supported out of the box. To support another driver, map it in
 `RoundlyConsulting\Metrics\Types\Trend\QueryExpressions\QueryExpression` in
 `Trend::$queryExpressions` keyed by the driver name.
 
+### Gap filling
+
+Every bucket in the selected range is present in the output — empty buckets are filled with
+`0` so charts have a continuous axis. Opt out with `withoutGapFilling()` to return only the
+buckets that actually have rows:
+
+```php
+Metric::trend()->count(User::query(), 'created_at')->daily()->withoutGapFilling()->toArray();
+```
+
+### Multi-series trends
+
+Split a trend by a dimension with `groupBy()`. The combined totals stay under `trends`, and
+an additive `series` key holds one bucket set per dimension value:
+
+```php
+Metric::trend()->count(User::query(), 'created_at')->daily()->groupBy('plan')->toArray();
+// result => [
+//   'trends' => ['2024-01-01' => 30.0, ...],            // totals across series
+//   'series' => [
+//     'pro'  => ['2024-01-01' => 20.0, ...],
+//     'free' => ['2024-01-01' => 10.0, ...],
+//   ],
+// ]
+```
+
+Each series is gap-filled across the same range, so every series shares the same buckets.
+
 ## Caching
 
 Caching is **off by default**. Enable it globally via config, or per metric:
@@ -325,9 +486,9 @@ For trends and partitions the formatter is applied to every point.
 Result objects expose typed getters for chart consumers, in addition to `toArray()`:
 
 - `ValueResult`: `value()`, `previous()`, `change()`, `isIncrease()`
-- `TrendResult`: `trends()`, `labels()`, `values()`
+- `TrendResult`: `trends()`, `series()`, `labels()`, `values()`
 - `ProgressResult`: `value()`, `progress()`, `target()`, `previous()`, `isIncrease()`
-- `PartitionResult`: `partitions()`, `labels()`, `values()`
+- `PartitionResult`: `partitions()`, `labels()`, `keys()`, `values()`
 
 ## Configuration
 
@@ -343,6 +504,7 @@ The published `config/metrics.php` documents every key:
 | `cache.store` | `?string` | `null` (default store) | `METRICS_CACHE_STORE` |
 | `cache.ttl` | `int` | `300` | `METRICS_CACHE_TTL` |
 | `cache.prefix` | `string` | `metrics` | — |
+| `partition.other_label` | `string` | `Other` | — |
 | `trend_drivers` | `array` | mysql/mariadb/pgsql/sqlite | — |
 
 ## Testing
