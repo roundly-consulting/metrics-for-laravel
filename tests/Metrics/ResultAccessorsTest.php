@@ -24,6 +24,16 @@ it('exposes typed accessors on a trend result', function (): void {
         ->and($result->values())->toBe([10.0, 20.0]);
 });
 
+it('exposes the series buckets on a grouped trend result', function (): void {
+    $result = new TrendResult(
+        ['2023-01' => 30.0],
+        ['pro' => ['2023-01' => 20.0], 'free' => ['2023-01' => 10.0]],
+    );
+
+    expect($result->series())->toBe(['pro' => ['2023-01' => 20.0], 'free' => ['2023-01' => 10.0]])
+        ->and($result->trends())->toBe(['2023-01' => 30.0]);
+});
+
 it('exposes typed accessors on a progress result', function (): void {
     $result = new ProgressResult(value: 4.0, target: 8.0, progress: 50.0, avoid: false, previous: 2.0, previousProgress: 25.0);
 

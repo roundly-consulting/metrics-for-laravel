@@ -15,7 +15,15 @@ it('registers and resolves metrics by key', function (): void {
     Metric::register('users', Users::class);
 
     expect(Metric::get('users'))->toBeInstanceOf(Users::class)
-        ->and(Metric::has('users'))->toBeTrue();
+        ->and(Metric::has('users'))->toBeTrue()
+        ->and(Metric::get('users')->key())->toBe('users');
+});
+
+it('lists registered metric keys without resolving them', function (): void {
+    Metric::register('a', Users::class);
+    Metric::register('b', Users::class);
+
+    expect(Metric::keys())->toBe(['a', 'b']);
 });
 
 it('resolves a registered instance and closure', function (): void {
