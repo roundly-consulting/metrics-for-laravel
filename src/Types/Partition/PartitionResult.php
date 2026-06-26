@@ -16,6 +16,30 @@ final class PartitionResult implements Result
     ) {}
 
     /**
+     * @return array<array-key, float>
+     */
+    public function partitions(): array
+    {
+        return $this->results;
+    }
+
+    /**
+     * @return list<string>
+     */
+    public function labels(): array
+    {
+        return array_map(strval(...), array_keys($this->results));
+    }
+
+    /**
+     * @return list<float>
+     */
+    public function values(): array
+    {
+        return array_values($this->results);
+    }
+
+    /**
      * @return array<string, mixed>
      */
     public function toArray(): array

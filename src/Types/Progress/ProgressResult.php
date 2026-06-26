@@ -17,6 +17,31 @@ final class ProgressResult implements Result
         protected ?float $previousProgress = null,
     ) {}
 
+    public function value(): float
+    {
+        return $this->value;
+    }
+
+    public function target(): float
+    {
+        return $this->target;
+    }
+
+    public function progress(): float
+    {
+        return $this->progress;
+    }
+
+    public function previous(): ?float
+    {
+        return $this->previous;
+    }
+
+    public function isIncrease(): bool
+    {
+        return $this->value > $this->previous;
+    }
+
     /**
      * @return array<string, mixed>
      */

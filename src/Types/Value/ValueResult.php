@@ -24,6 +24,16 @@ final class ValueResult implements Result
         return $this->previous;
     }
 
+    public function change(): ?float
+    {
+        return $this->change;
+    }
+
+    public function isIncrease(): bool
+    {
+        return $this->value > $this->previous;
+    }
+
     /**
      * @return array<string, mixed>
      */
