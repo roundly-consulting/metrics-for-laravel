@@ -4,9 +4,9 @@ declare(strict_types=1);
 
 namespace RoundlyConsulting\Metrics\Tests\Metrics\Trend;
 
-use RoundlyConsulting\Metrics\Metrics\Result;
-use RoundlyConsulting\Metrics\Metrics\Trend\Trend;
 use RoundlyConsulting\Metrics\Tests\Models\User;
+use RoundlyConsulting\Metrics\Types\Result;
+use RoundlyConsulting\Metrics\Types\Trend\Trend;
 
 class Users extends Trend
 {

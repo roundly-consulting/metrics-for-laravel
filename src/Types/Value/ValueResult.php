@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-namespace RoundlyConsulting\Metrics\Metrics\Value;
+namespace RoundlyConsulting\Metrics\Types\Value;
 
-use RoundlyConsulting\Metrics\Metrics\Result;
+use RoundlyConsulting\Metrics\Types\Result;
 
 final class ValueResult implements Result
 {

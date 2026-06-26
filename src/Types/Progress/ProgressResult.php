@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-namespace RoundlyConsulting\Metrics\Metrics\Progress;
+namespace RoundlyConsulting\Metrics\Types\Progress;
 
-use RoundlyConsulting\Metrics\Metrics\Result;
+use RoundlyConsulting\Metrics\Types\Result;
 
 final class ProgressResult implements Result
 {

@@ -39,17 +39,17 @@ the result object yourself (e.g. from cached values).
 
 | Type | Extend | `calculate()` returns | Good for |
 |---|---|---|---|
-| Value | `RoundlyConsulting\Metrics\Metrics\Value\Value` | `ValueResult` | a single number, optionally vs. the previous period |
-| Trend | `RoundlyConsulting\Metrics\Metrics\Trend\Trend` | `TrendResult` | a time series (line/area chart) |
-| Progress | `RoundlyConsulting\Metrics\Metrics\Progress\Progress` | `ProgressResult` | current value vs. a target (progress bar) |
-| Partition | `RoundlyConsulting\Metrics\Metrics\Partition\Partition` | `PartitionResult` | a grouped breakdown (pie/bar chart) |
+| Value | `RoundlyConsulting\Metrics\Types\Value\Value` | `ValueResult` | a single number, optionally vs. the previous period |
+| Trend | `RoundlyConsulting\Metrics\Types\Trend\Trend` | `TrendResult` | a time series (line/area chart) |
+| Progress | `RoundlyConsulting\Metrics\Types\Progress\Progress` | `ProgressResult` | current value vs. a target (progress bar) |
+| Partition | `RoundlyConsulting\Metrics\Types\Partition\Partition` | `PartitionResult` | a grouped breakdown (pie/bar chart) |
 
 ### Value
 
 ```php
 use App\Models\User;
-use RoundlyConsulting\Metrics\Metrics\Result;
-use RoundlyConsulting\Metrics\Metrics\Value\Value;
+use RoundlyConsulting\Metrics\Types\Result;
+use RoundlyConsulting\Metrics\Types\Value\Value;
 
 final class RegisteredUsers extends Value
 {
@@ -79,8 +79,8 @@ public function index(RegisteredUsers $metric, Request $request): JsonResponse
 
 ```php
 use App\Models\User;
-use RoundlyConsulting\Metrics\Metrics\Result;
-use RoundlyConsulting\Metrics\Metrics\Trend\Trend;
+use RoundlyConsulting\Metrics\Types\Result;
+use RoundlyConsulting\Metrics\Types\Trend\Trend;
 
 final class RegisteredUsersTrend extends Trend
 {
@@ -105,8 +105,8 @@ goal to **reach**.
 
 ```php
 use App\Models\Subscription;
-use RoundlyConsulting\Metrics\Metrics\Progress\Progress;
-use RoundlyConsulting\Metrics\Metrics\Result;
+use RoundlyConsulting\Metrics\Types\Progress\Progress;
+use RoundlyConsulting\Metrics\Types\Result;
 
 final class MonthlyRevenueGoal extends Progress
 {
@@ -126,8 +126,8 @@ final class MonthlyRevenueGoal extends Progress
 
 ```php
 use App\Models\User;
-use RoundlyConsulting\Metrics\Metrics\Partition\Partition;
-use RoundlyConsulting\Metrics\Metrics\Result;
+use RoundlyConsulting\Metrics\Types\Partition\Partition;
+use RoundlyConsulting\Metrics\Types\Result;
 
 final class UsersByPlan extends Partition
 {
@@ -147,8 +147,8 @@ Override presentation and behaviour either inline (fluent calls) or inside the m
 
 ```php
 use App\Models\User;
-use RoundlyConsulting\Metrics\Metrics\Result;
-use RoundlyConsulting\Metrics\Metrics\Value\Value;
+use RoundlyConsulting\Metrics\Types\Result;
+use RoundlyConsulting\Metrics\Types\Value\Value;
 
 final class RegisteredUsers extends Value
 {
@@ -274,7 +274,7 @@ final class RegisteredUsersTrend extends Trend
 
 > Trend metrics use a database-specific SQL date expression for grouping. MySQL and SQLite
 > are supported out of the box; for another driver, register an implementation of
-> `RoundlyConsulting\Metrics\Metrics\Trend\QueryExpressions\QueryExpression` in
+> `RoundlyConsulting\Metrics\Types\Trend\QueryExpressions\QueryExpression` in
 > `Trend::$queryExpressions` keyed by the driver name.
 
 ## Testing

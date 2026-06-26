@@ -4,9 +4,9 @@ declare(strict_types=1);
 
 namespace RoundlyConsulting\Metrics\Tests\Metrics\Value;
 
-use RoundlyConsulting\Metrics\Metrics\Result;
-use RoundlyConsulting\Metrics\Metrics\Value\Value;
 use RoundlyConsulting\Metrics\Tests\Models\User;
+use RoundlyConsulting\Metrics\Types\Result;
+use RoundlyConsulting\Metrics\Types\Value\Value;
 
 class FullyPredefinedUsersMetrics extends Value
 {

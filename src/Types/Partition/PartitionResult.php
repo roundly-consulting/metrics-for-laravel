@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-namespace RoundlyConsulting\Metrics\Metrics\Partition;
+namespace RoundlyConsulting\Metrics\Types\Partition;
 
-use RoundlyConsulting\Metrics\Metrics\Result;
+use RoundlyConsulting\Metrics\Types\Result;
 
 final class PartitionResult implements Result
 {

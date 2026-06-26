@@ -4,9 +4,9 @@ declare(strict_types=1);
 
 namespace RoundlyConsulting\Metrics\Tests\Metrics\Progress;
 
-use RoundlyConsulting\Metrics\Metrics\Progress\Progress;
-use RoundlyConsulting\Metrics\Metrics\Result;
 use RoundlyConsulting\Metrics\Tests\Models\User;
+use RoundlyConsulting\Metrics\Types\Progress\Progress;
+use RoundlyConsulting\Metrics\Types\Result;
 
 class Users extends Progress
 {

@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace RoundlyConsulting\Metrics\Metrics;
+namespace RoundlyConsulting\Metrics\Types;
 
 interface Result
 {

@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace RoundlyConsulting\Metrics\Metrics\Trend;
+namespace RoundlyConsulting\Metrics\Types\Trend;
 
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
@@ -10,14 +10,14 @@ use Illuminate\Database\Query\Builder as QueryBuilder;
 use Illuminate\Support\Collection;
 use RoundlyConsulting\Metrics\Exceptions\MissingTrendQueryExpressionException;
 use RoundlyConsulting\Metrics\Metrics;
-use RoundlyConsulting\Metrics\Metrics\Result;
-use RoundlyConsulting\Metrics\Metrics\Trend\QueryExpressions\Mysql;
-use RoundlyConsulting\Metrics\Metrics\Trend\QueryExpressions\QueryExpression;
-use RoundlyConsulting\Metrics\Metrics\Trend\QueryExpressions\Sqlite;
 use RoundlyConsulting\Metrics\Ranges\Custom;
 use RoundlyConsulting\Metrics\Ranges\Range;
 use RoundlyConsulting\Metrics\Support\RawExpression;
 use RoundlyConsulting\Metrics\Traits\Unit;
+use RoundlyConsulting\Metrics\Types\Result;
+use RoundlyConsulting\Metrics\Types\Trend\QueryExpressions\Mysql;
+use RoundlyConsulting\Metrics\Types\Trend\QueryExpressions\QueryExpression;
+use RoundlyConsulting\Metrics\Types\Trend\QueryExpressions\Sqlite;
 
 abstract class Trend extends Metrics
 {

@@ -2,11 +2,11 @@
 
 declare(strict_types=1);
 
-namespace RoundlyConsulting\Metrics\Metrics\Progress;
+namespace RoundlyConsulting\Metrics\Types\Progress;
 
-use RoundlyConsulting\Metrics\Metrics\Result;
-use RoundlyConsulting\Metrics\Metrics\Value\Value;
-use RoundlyConsulting\Metrics\Metrics\Value\ValueResult;
+use RoundlyConsulting\Metrics\Types\Result;
+use RoundlyConsulting\Metrics\Types\Value\Value;
+use RoundlyConsulting\Metrics\Types\Value\ValueResult;
 
 abstract class Progress extends Value
 {

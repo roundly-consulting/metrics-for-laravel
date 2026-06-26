@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace RoundlyConsulting\Metrics\Metrics\Trend\QueryExpressions;
+namespace RoundlyConsulting\Metrics\Types\Trend\QueryExpressions;
 
 interface QueryExpression
 {

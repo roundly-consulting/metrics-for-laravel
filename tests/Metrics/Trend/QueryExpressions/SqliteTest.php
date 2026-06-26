@@ -3,7 +3,7 @@
 declare(strict_types=1);
 
 use RoundlyConsulting\Metrics\Exceptions\InvalidUnitException;
-use RoundlyConsulting\Metrics\Metrics\Trend\QueryExpressions\Sqlite;
+use RoundlyConsulting\Metrics\Types\Trend\QueryExpressions\Sqlite;
 
 it('returns correct query expression for each format', function () {
     $sqlite = new Sqlite;

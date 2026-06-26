@@ -2,14 +2,14 @@
 
 declare(strict_types=1);
 
-namespace RoundlyConsulting\Metrics\Metrics\Value;
+namespace RoundlyConsulting\Metrics\Types\Value;
 
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use RoundlyConsulting\Metrics\Metrics;
-use RoundlyConsulting\Metrics\Metrics\Result;
 use RoundlyConsulting\Metrics\Ranges\Range;
 use RoundlyConsulting\Metrics\Traits\PercentageCalculator;
+use RoundlyConsulting\Metrics\Types\Result;
 
 abstract class Value extends Metrics
 {

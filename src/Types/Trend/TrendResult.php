@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-namespace RoundlyConsulting\Metrics\Metrics\Trend;
+namespace RoundlyConsulting\Metrics\Types\Trend;
 
-use RoundlyConsulting\Metrics\Metrics\Result;
+use RoundlyConsulting\Metrics\Types\Result;
 
 final class TrendResult implements Result
 {

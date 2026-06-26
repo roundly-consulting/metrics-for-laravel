@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace RoundlyConsulting\Metrics;
 
 use Illuminate\Contracts\Support\Arrayable;
-use RoundlyConsulting\Metrics\Metrics\Result;
 use RoundlyConsulting\Metrics\Traits\Description;
 use RoundlyConsulting\Metrics\Traits\Humanize;
 use RoundlyConsulting\Metrics\Traits\Makeable;
@@ -14,6 +13,7 @@ use RoundlyConsulting\Metrics\Traits\Prefix;
 use RoundlyConsulting\Metrics\Traits\Ranges;
 use RoundlyConsulting\Metrics\Traits\Rounding;
 use RoundlyConsulting\Metrics\Traits\Suffix;
+use RoundlyConsulting\Metrics\Types\Result;
 
 /**
  * @phpstan-consistent-constructor

@@ -4,9 +4,9 @@ declare(strict_types=1);
 
 namespace RoundlyConsulting\Metrics\Tests\Metrics\Partition;
 
-use RoundlyConsulting\Metrics\Metrics\Partition\Partition;
-use RoundlyConsulting\Metrics\Metrics\Result;
 use RoundlyConsulting\Metrics\Tests\Models\User;
+use RoundlyConsulting\Metrics\Types\Partition\Partition;
+use RoundlyConsulting\Metrics\Types\Result;
 
 class Users extends Partition
 {

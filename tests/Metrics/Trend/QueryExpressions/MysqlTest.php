@@ -3,7 +3,7 @@
 declare(strict_types=1);
 
 use RoundlyConsulting\Metrics\Exceptions\InvalidUnitException;
-use RoundlyConsulting\Metrics\Metrics\Trend\QueryExpressions\Mysql;
+use RoundlyConsulting\Metrics\Types\Trend\QueryExpressions\Mysql;
 
 it('returns correct query expression for each format', function () {
     $mysql = new Mysql;

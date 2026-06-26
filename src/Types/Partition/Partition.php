@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace RoundlyConsulting\Metrics\Metrics\Partition;
+namespace RoundlyConsulting\Metrics\Types\Partition;
 
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
