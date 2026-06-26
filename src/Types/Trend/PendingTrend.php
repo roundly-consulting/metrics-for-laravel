@@ -85,8 +85,8 @@ final class PendingTrend extends Metrics
             throw IncompleteMetricException::missingQuery();
         }
 
-        return $this->toResult(
-            $this->aggregate($this->query, $this->aggregateFunction, $this->aggregateColumn, $this->aggregateDateColumn),
+        return $this->resolveTrend(
+            $this->query, $this->aggregateFunction, $this->aggregateColumn, $this->aggregateDateColumn,
         );
     }
 }

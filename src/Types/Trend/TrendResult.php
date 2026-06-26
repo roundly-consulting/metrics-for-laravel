@@ -10,8 +10,12 @@ final class TrendResult implements Result
 {
     /**
      * @param  array<string, float>  $results
+     * @param  array<string, array<string, float>>  $series  buckets keyed by series, when grouped
      */
-    public function __construct(protected array $results = []) {}
+    public function __construct(
+        protected array $results = [],
+        protected array $series = [],
+    ) {}
 
     /**
      * @return array<string, float>
@@ -19,6 +23,16 @@ final class TrendResult implements Result
     public function trends(): array
     {
         return $this->results;
+    }
+
+    /**
+     * The per-series buckets when the trend is grouped by a dimension.
+     *
+     * @return array<string, array<string, float>>
+     */
+    public function series(): array
+    {
+        return $this->series;
     }
 
     /**
@@ -42,8 +56,12 @@ final class TrendResult implements Result
      */
     public function toArray(): array
     {
-        return [
-            'trends' => $this->results,
-        ];
+        $data = ['trends' => $this->results];
+
+        if ($this->series !== []) {
+            $data['series'] = $this->series;
+        }
+
+        return $data;
     }
 }

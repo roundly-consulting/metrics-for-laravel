@@ -19,7 +19,7 @@ abstract class Trend extends Metrics
      */
     protected function count(Builder $query, string $column, ?string $dateColumn = null): Result
     {
-        return $this->toResult($this->aggregate($query, 'count', $column, $dateColumn));
+        return $this->resolveTrend($query, 'count', $column, $dateColumn);
     }
 
     /**
@@ -27,7 +27,7 @@ abstract class Trend extends Metrics
      */
     protected function average(Builder $query, string $column, ?string $dateColumn = null): Result
     {
-        return $this->toResult($this->aggregate($query, 'avg', $column, $dateColumn));
+        return $this->resolveTrend($query, 'avg', $column, $dateColumn);
     }
 
     /**
@@ -35,7 +35,7 @@ abstract class Trend extends Metrics
      */
     protected function sum(Builder $query, string $column, ?string $dateColumn = null): Result
     {
-        return $this->toResult($this->aggregate($query, 'sum', $column, $dateColumn));
+        return $this->resolveTrend($query, 'sum', $column, $dateColumn);
     }
 
     /**
@@ -43,7 +43,7 @@ abstract class Trend extends Metrics
      */
     protected function max(Builder $query, string $column, ?string $dateColumn = null): Result
     {
-        return $this->toResult($this->aggregate($query, 'max', $column, $dateColumn));
+        return $this->resolveTrend($query, 'max', $column, $dateColumn);
     }
 
     /**
@@ -51,6 +51,6 @@ abstract class Trend extends Metrics
      */
     protected function min(Builder $query, string $column, ?string $dateColumn = null): Result
     {
-        return $this->toResult($this->aggregate($query, 'min', $column, $dateColumn));
+        return $this->resolveTrend($query, 'min', $column, $dateColumn);
     }
 }
