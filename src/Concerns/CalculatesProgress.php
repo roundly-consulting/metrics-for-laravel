@@ -36,7 +36,14 @@ trait CalculatesProgress
      */
     protected function cacheDiscriminators(): array
     {
-        return ['target' => $this->target, 'avoid' => $this->avoid, 'change' => $this->withChange];
+        return [
+            'target' => $this->target,
+            'avoid' => $this->avoid,
+            'change' => $this->withChange,
+            'compare' => $this->compareTo,
+            'compare_start' => $this->compareToStart,
+            'compare_end' => $this->compareToEnd,
+        ];
     }
 
     protected function resolveResult(ValueResult $result): Result

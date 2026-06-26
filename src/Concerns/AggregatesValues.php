@@ -6,6 +6,8 @@ namespace RoundlyConsulting\Metrics\Concerns;
 
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
+use RoundlyConsulting\Metrics\Enums\Period;
+use RoundlyConsulting\Metrics\Exceptions\InvalidRangeException;
 use RoundlyConsulting\Metrics\Ranges\Range;
 use RoundlyConsulting\Metrics\Traits\PercentageCalculator;
 use RoundlyConsulting\Metrics\Types\Result;
@@ -17,9 +19,29 @@ trait AggregatesValues
 
     protected bool $withChange = false;
 
+    protected ?string $compareTo = null;
+
+    protected ?string $compareToStart = null;
+
+    protected ?string $compareToEnd = null;
+
     public function withChangeAgainstPreviousPeriod(bool $withChange = true): self
     {
         $this->withChange = $withChange;
+
+        return $this;
+    }
+
+    /**
+     * Compare the current value against an arbitrary range instead of the
+     * immediately-preceding period. Implies withChangeAgainstPreviousPeriod().
+     */
+    public function compareTo(Period|string $range, ?string $customRangeStart = null, ?string $customRangeEnd = null): self
+    {
+        $this->compareTo = $range instanceof Period ? $range->value : $range;
+        $this->compareToStart = $customRangeStart;
+        $this->compareToEnd = $customRangeEnd;
+        $this->withChange = true;
 
         return $this;
     }
@@ -29,7 +51,31 @@ trait AggregatesValues
      */
     protected function cacheDiscriminators(): array
     {
-        return ['change' => $this->withChange];
+        return [
+            'change' => $this->withChange,
+            'compare' => $this->compareTo,
+            'compare_start' => $this->compareToStart,
+            'compare_end' => $this->compareToEnd,
+        ];
+    }
+
+    /**
+     * Resolve the range the current value is compared against.
+     */
+    protected function comparisonRange(): Range
+    {
+        if ($this->compareTo === null) {
+            return $this->getRange()->previous();
+        }
+
+        $period = Period::tryFrom($this->compareTo);
+
+        if ($period === null) {
+            throw InvalidRangeException::for($this->compareTo);
+        }
+
+        return $period->toRange($this->compareToStart, $this->compareToEnd)
+            ->usingTimezone($this->timezoneOverride);
     }
 
     /**
@@ -70,7 +116,7 @@ trait AggregatesValues
 
         $previousResult = $this->getResultForRange(
             query: $query,
-            range: $this->getRange()->previous(),
+            range: $this->comparisonRange(),
             function: $function,
             column: $column,
             dateColumn: $dateColumn,
