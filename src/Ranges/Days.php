@@ -13,18 +13,18 @@ final class Days extends BaseRange
     public function start(): CarbonImmutable
     {
         if ($this->previous) {
-            return CarbonImmutable::now()->subDays($this->days * 2);
+            return $this->now()->subDays($this->days * 2);
         }
 
-        return CarbonImmutable::now()->subDays($this->days);
+        return $this->now()->subDays($this->days);
     }
 
     public function end(): CarbonImmutable
     {
         if ($this->previous) {
-            return CarbonImmutable::now()->subDays($this->days)->subSecond();
+            return $this->now()->subDays($this->days)->subSecond();
         }
 
-        return CarbonImmutable::now();
+        return $this->now();
     }
 }

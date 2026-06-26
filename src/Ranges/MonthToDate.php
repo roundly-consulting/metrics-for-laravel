@@ -11,18 +11,18 @@ final class MonthToDate extends BaseRange
     public function start(): CarbonImmutable
     {
         if ($this->previous) {
-            return CarbonImmutable::now()->subMonthWithoutOverflow()->startOfMonth();
+            return $this->now()->subMonthWithoutOverflow()->startOfMonth();
         }
 
-        return CarbonImmutable::now()->startOfMonth();
+        return $this->now()->startOfMonth();
     }
 
     public function end(): CarbonImmutable
     {
         if ($this->previous) {
-            return CarbonImmutable::now()->subMonthWithoutOverflow();
+            return $this->now()->subMonthWithoutOverflow();
         }
 
-        return CarbonImmutable::now();
+        return $this->now();
     }
 }

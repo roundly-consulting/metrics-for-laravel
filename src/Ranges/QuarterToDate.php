@@ -6,23 +6,23 @@ namespace RoundlyConsulting\Metrics\Ranges;
 
 use Carbon\CarbonImmutable;
 
-final class Today extends BaseRange
+final class QuarterToDate extends BaseRange
 {
     public function start(): CarbonImmutable
     {
         if ($this->previous) {
-            return $this->now()->subDay()->startOfDay();
+            return $this->now()->subQuarter()->startOfQuarter();
         }
 
-        return $this->now()->startOfDay();
+        return $this->now()->startOfQuarter();
     }
 
     public function end(): CarbonImmutable
     {
         if ($this->previous) {
-            return $this->now()->subDay()->endOfDay();
+            return $this->now()->subQuarter();
         }
 
-        return $this->now()->endOfDay();
+        return $this->now();
     }
 }

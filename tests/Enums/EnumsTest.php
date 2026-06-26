@@ -40,14 +40,26 @@ it('ignores an unknown unit string', function (): void {
 
 it('lists period options with translatable labels', function (): void {
     expect(Period::options())->toBe([
+        7 => '7 Days',
+        14 => '14 Days',
         30 => '30 Days',
         60 => '60 Days',
         90 => '90 Days',
         365 => '365 Days',
         'YESTERDAY' => 'Yesterday',
         'TODAY' => 'Today',
+        'WTD' => 'Week To Date',
         'MTD' => 'Month To Date',
+        'QTD' => 'Quarter To Date',
         'YTD' => 'Year To Date',
+        'THIS_WEEK' => 'This Week',
+        'LAST_WEEK' => 'Last Week',
+        'THIS_MONTH' => 'This Month',
+        'LAST_MONTH' => 'Last Month',
+        'THIS_QUARTER' => 'This Quarter',
+        'LAST_QUARTER' => 'Last Quarter',
+        'THIS_YEAR' => 'This Year',
+        'LAST_YEAR' => 'Last Year',
         'CUSTOM' => 'Custom',
         'ALL' => 'All',
     ]);

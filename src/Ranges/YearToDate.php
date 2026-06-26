@@ -11,18 +11,18 @@ final class YearToDate extends BaseRange
     public function start(): CarbonImmutable
     {
         if ($this->previous) {
-            return CarbonImmutable::now()->subYear()->startOfYear();
+            return $this->now()->subYear()->startOfYear();
         }
 
-        return CarbonImmutable::now()->startOfYear();
+        return $this->now()->startOfYear();
     }
 
     public function end(): CarbonImmutable
     {
         if ($this->previous) {
-            return CarbonImmutable::now()->subYear();
+            return $this->now()->subYear();
         }
 
-        return CarbonImmutable::now();
+        return $this->now();
     }
 }
