@@ -16,6 +16,7 @@ use RoundlyConsulting\Metrics\Support\RawExpression;
 use RoundlyConsulting\Metrics\Traits\Unit;
 use RoundlyConsulting\Metrics\Types\Result;
 use RoundlyConsulting\Metrics\Types\Trend\QueryExpressions\Mysql;
+use RoundlyConsulting\Metrics\Types\Trend\QueryExpressions\Postgres;
 use RoundlyConsulting\Metrics\Types\Trend\QueryExpressions\QueryExpression;
 use RoundlyConsulting\Metrics\Types\Trend\QueryExpressions\Sqlite;
 
@@ -28,6 +29,8 @@ abstract class Trend extends Metrics
      */
     public static array $queryExpressions = [
         'mysql' => Mysql::class,
+        'mariadb' => Mysql::class,
+        'pgsql' => Postgres::class,
         'sqlite' => Sqlite::class,
     ];
 
