@@ -4,9 +4,7 @@ declare(strict_types=1);
 
 namespace RoundlyConsulting\Metrics\Exceptions;
 
-use Exception;
-
-final class InvalidUnitException extends Exception
+final class InvalidUnitException extends MetricsException
 {
     public static function for(string $unit): static
     {

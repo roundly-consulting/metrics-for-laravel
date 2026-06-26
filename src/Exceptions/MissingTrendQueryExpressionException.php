@@ -4,9 +4,7 @@ declare(strict_types=1);
 
 namespace RoundlyConsulting\Metrics\Exceptions;
 
-use Exception;
-
-final class MissingTrendQueryExpressionException extends Exception
+final class MissingTrendQueryExpressionException extends MetricsException
 {
     public static function forDriver(string $driver): static
     {
