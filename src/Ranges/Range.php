@@ -10,6 +10,8 @@ interface Range
 {
     public function previous(): Range;
 
+    public function usingTimezone(?string $timezone): Range;
+
     public function start(): CarbonImmutable;
 
     public function end(): CarbonImmutable;

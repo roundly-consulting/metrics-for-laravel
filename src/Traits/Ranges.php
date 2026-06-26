@@ -16,6 +16,8 @@ trait Ranges
 
     protected ?string $customRangeEnd = null;
 
+    protected ?string $timezoneOverride = null;
+
     /**
      * The available periods keyed by value with translatable labels.
      *
@@ -38,6 +40,17 @@ trait Ranges
         return $this;
     }
 
+    /**
+     * Resolve this metric's ranges in an explicit timezone, overriding
+     * config('metrics.timezone') and the application timezone.
+     */
+    public function timezone(?string $timezone): self
+    {
+        $this->timezoneOverride = $timezone;
+
+        return $this;
+    }
+
     protected function getRange(): Range
     {
         $period = Period::tryFrom($this->range);
@@ -46,6 +59,7 @@ trait Ranges
             throw InvalidRangeException::for($this->range);
         }
 
-        return $period->toRange($this->customRangeStart, $this->customRangeEnd);
+        return $period->toRange($this->customRangeStart, $this->customRangeEnd)
+            ->usingTimezone($this->timezoneOverride);
     }
 }

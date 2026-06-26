@@ -101,7 +101,7 @@ trait Cacheable
         $prefix = config('metrics.cache.prefix', 'metrics');
 
         $parts = array_merge(
-            [static::class, $this->range, $this->customRangeStart, $this->customRangeEnd],
+            [static::class, $this->range, $this->customRangeStart, $this->customRangeEnd, $this->timezoneOverride],
             $this->cacheDiscriminators(),
         );
 

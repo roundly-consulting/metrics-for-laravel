@@ -10,6 +10,8 @@ abstract class BaseRange implements Range
 {
     protected bool $previous = false;
 
+    protected ?string $timezone = null;
+
     public function previous(): Range
     {
         $instance = clone $this;
@@ -19,12 +21,23 @@ abstract class BaseRange implements Range
     }
 
     /**
-     * The current moment in the configured reporting timezone
-     * (falls back to the application timezone).
+     * Resolve this range in an explicit timezone, overriding the configured one.
+     */
+    public function usingTimezone(?string $timezone): Range
+    {
+        $instance = clone $this;
+        $instance->timezone = $timezone;
+
+        return $instance;
+    }
+
+    /**
+     * The current moment in the per-metric timezone override, falling back to
+     * the configured reporting timezone and finally the application timezone.
      */
     protected function now(): CarbonImmutable
     {
-        $timezone = config('metrics.timezone');
+        $timezone = $this->timezone ?? config('metrics.timezone');
 
         return CarbonImmutable::now(is_string($timezone) ? $timezone : null);
     }
