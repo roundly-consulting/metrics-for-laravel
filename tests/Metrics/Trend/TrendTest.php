@@ -225,5 +225,7 @@ it('returns empty result when no records are retrieved from database', function 
 });
 
 it('throws MissingTrendQueryExpressionException exception when no driver has been found', function () {
+    config()->set('metrics.trend_drivers', []);
+
     UsersForMissingQueryExpression::make()->toArray();
 })->throws(MissingTrendQueryExpressionException::class, 'Missing trend query expression for `sqlite` driver.');

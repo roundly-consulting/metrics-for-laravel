@@ -8,6 +8,7 @@ use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Query\Builder as QueryBuilder;
 use Illuminate\Support\Collection;
+use RoundlyConsulting\Metrics\Enums\Unit as UnitEnum;
 use RoundlyConsulting\Metrics\Exceptions\MissingTrendQueryExpressionException;
 use RoundlyConsulting\Metrics\Metrics;
 use RoundlyConsulting\Metrics\Ranges\Custom;
@@ -15,10 +16,7 @@ use RoundlyConsulting\Metrics\Ranges\Range;
 use RoundlyConsulting\Metrics\Support\RawExpression;
 use RoundlyConsulting\Metrics\Traits\Unit;
 use RoundlyConsulting\Metrics\Types\Result;
-use RoundlyConsulting\Metrics\Types\Trend\QueryExpressions\Mysql;
-use RoundlyConsulting\Metrics\Types\Trend\QueryExpressions\Postgres;
 use RoundlyConsulting\Metrics\Types\Trend\QueryExpressions\QueryExpression;
-use RoundlyConsulting\Metrics\Types\Trend\QueryExpressions\Sqlite;
 
 abstract class Trend extends Metrics
 {
@@ -27,12 +25,18 @@ abstract class Trend extends Metrics
     /**
      * @var array<string, class-string<QueryExpression>>
      */
-    public static array $queryExpressions = [
-        'mysql' => Mysql::class,
-        'mariadb' => Mysql::class,
-        'pgsql' => Postgres::class,
-        'sqlite' => Sqlite::class,
-    ];
+    public static array $queryExpressions = [];
+
+    protected function applyConfiguredDefaults(): void
+    {
+        parent::applyConfiguredDefaults();
+
+        $unit = config('metrics.default_unit');
+
+        if (is_string($unit) && ($resolved = UnitEnum::tryFrom($unit)) !== null) {
+            $this->unit = $resolved;
+        }
+    }
 
     /**
      * @param  Builder<Model>  $query
@@ -159,10 +163,34 @@ abstract class Trend extends Metrics
     {
         $driver = $query->getModel()->getConnection()->getDriverName();
 
-        if (array_key_exists($driver, static::$queryExpressions)) {
-            return resolve(static::$queryExpressions[$driver]);
+        $expressions = static::$queryExpressions + $this->configuredTrendDrivers();
+
+        if (array_key_exists($driver, $expressions)) {
+            return resolve($expressions[$driver]);
         }
 
         throw MissingTrendQueryExpressionException::forDriver($driver);
+    }
+
+    /**
+     * @return array<string, class-string<QueryExpression>>
+     */
+    protected function configuredTrendDrivers(): array
+    {
+        $drivers = config('metrics.trend_drivers');
+
+        if (! is_array($drivers)) {
+            return [];
+        }
+
+        $valid = [];
+
+        foreach ($drivers as $name => $class) {
+            if (is_string($name) && is_string($class) && is_a($class, QueryExpression::class, true)) {
+                $valid[$name] = $class;
+            }
+        }
+
+        return $valid;
     }
 }

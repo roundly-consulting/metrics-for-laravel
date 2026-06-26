@@ -33,7 +33,24 @@ abstract class Metrics implements Arrayable
 
     public function __construct()
     {
+        $this->applyConfiguredDefaults();
+
         $this->setup();
+    }
+
+    protected function applyConfiguredDefaults(): void
+    {
+        $range = config('metrics.default_range');
+
+        if (is_string($range)) {
+            $this->range = $range;
+        }
+
+        $precision = config('metrics.precision');
+
+        if (is_int($precision)) {
+            $this->roundingPrecision = $precision;
+        }
     }
 
     protected function setup(): void
