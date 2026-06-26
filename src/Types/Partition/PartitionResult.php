@@ -10,9 +10,11 @@ final class PartitionResult implements Result
 {
     /**
      * @param  array<array-key, float>  $results
+     * @param  array<string, string>  $labels  display labels keyed by raw group key
      */
     public function __construct(
-        protected array $results = []
+        protected array $results = [],
+        protected array $labels = [],
     ) {}
 
     /**
@@ -24,9 +26,26 @@ final class PartitionResult implements Result
     }
 
     /**
+     * Display labels for each group — the resolved labels when a label resolver
+     * is set, otherwise the raw group keys.
+     *
      * @return list<string>
      */
     public function labels(): array
+    {
+        if ($this->labels !== []) {
+            return array_values($this->labels);
+        }
+
+        return array_map(strval(...), array_keys($this->results));
+    }
+
+    /**
+     * The raw group keys, regardless of any label resolver.
+     *
+     * @return list<string>
+     */
+    public function keys(): array
     {
         return array_map(strval(...), array_keys($this->results));
     }
@@ -44,8 +63,12 @@ final class PartitionResult implements Result
      */
     public function toArray(): array
     {
-        return [
-            'partitions' => $this->results,
-        ];
+        $data = ['partitions' => $this->results];
+
+        if ($this->labels !== []) {
+            $data['labels'] = $this->labels;
+        }
+
+        return $data;
     }
 }

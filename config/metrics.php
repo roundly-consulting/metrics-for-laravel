@@ -56,6 +56,21 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | Partition "Other" bucket
+    |--------------------------------------------------------------------------
+    |
+    | When a partition is capped with limit(), the remaining groups are rolled
+    | into a single bucket using this (translatable) label. Override per metric
+    | with otherLabel().
+    |
+    */
+
+    'partition' => [
+        'other_label' => 'Other',
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
     | Trend query expression drivers
     |--------------------------------------------------------------------------
     |
