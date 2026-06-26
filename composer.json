@@ -64,7 +64,10 @@
         "laravel": {
             "providers": [
                 "RoundlyConsulting\\Metrics\\MetricsServiceProvider"
-            ]
+            ],
+            "aliases": {
+                "Metric": "RoundlyConsulting\\Metrics\\Facades\\Metric"
+            }
         }
     },
     "minimum-stability": "stable",

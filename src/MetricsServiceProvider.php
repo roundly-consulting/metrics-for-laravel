@@ -11,6 +11,9 @@ final class MetricsServiceProvider extends ServiceProvider
     public function register(): void
     {
         $this->mergeConfigFrom(__DIR__.'/../config/metrics.php', 'metrics');
+
+        $this->app->singleton(MetricsManager::class);
+        $this->app->alias(MetricsManager::class, 'metrics');
     }
 
     public function boot(): void
