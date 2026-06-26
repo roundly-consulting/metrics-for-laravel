@@ -6,13 +6,15 @@ namespace RoundlyConsulting\Metrics;
 
 use Closure;
 use Illuminate\Contracts\Container\Container;
+use Illuminate\Support\Facades\Facade;
 use RoundlyConsulting\Metrics\Exceptions\UnknownMetricException;
+use RoundlyConsulting\Metrics\Testing\MetricsFake;
 use RoundlyConsulting\Metrics\Types\Partition\PendingPartition;
 use RoundlyConsulting\Metrics\Types\Progress\PendingProgress;
 use RoundlyConsulting\Metrics\Types\Trend\PendingTrend;
 use RoundlyConsulting\Metrics\Types\Value\PendingValue;
 
-final class MetricsManager
+class MetricsManager
 {
     /**
      * @var array<string, class-string<Metrics>|Metrics|Closure(): Metrics>
@@ -20,6 +22,23 @@ final class MetricsManager
     private array $metrics = [];
 
     public function __construct(private readonly Container $container) {}
+
+    /**
+     * Swap the bound manager for a recording {@see MetricsFake} and return it,
+     * so host-application tests can stub metric results and assert resolution.
+     *
+     * @param  array<string, mixed>  $results
+     */
+    public static function fake(array $results = []): MetricsFake
+    {
+        $fake = new MetricsFake(app(), $results);
+
+        app()->instance(MetricsManager::class, $fake);
+        app()->instance('metrics', $fake);
+        Facade::clearResolvedInstance(MetricsManager::class);
+
+        return $fake;
+    }
 
     /**
      * @param  class-string<Metrics>|Metrics|Closure(): Metrics  $metric
@@ -40,7 +59,7 @@ final class MetricsManager
             throw UnknownMetricException::forKey($key);
         }
 
-        return $this->resolve($this->metrics[$key]);
+        return $this->resolve($this->metrics[$key])->withKey($key);
     }
 
     public function has(string $key): bool
@@ -49,14 +68,37 @@ final class MetricsManager
     }
 
     /**
+     * The keys of every registered metric, without resolving them.
+     *
+     * @return list<string>
+     */
+    public function keys(): array
+    {
+        return array_keys($this->metrics);
+    }
+
+    /**
      * @return array<string, Metrics>
      */
     public function all(): array
     {
-        return array_map(
-            fn (string|Metrics|Closure $metric): Metrics => $this->resolve($metric),
-            $this->metrics,
-        );
+        $resolved = [];
+
+        foreach ($this->metrics as $key => $metric) {
+            $resolved[$key] = $this->resolve($metric)->withKey($key);
+        }
+
+        return $resolved;
+    }
+
+    /**
+     * Resolve many registered metrics at once into one keyed envelope.
+     *
+     * @param  array<array-key, string>  $keys
+     */
+    public function dashboard(array $keys): Dashboard
+    {
+        return new Dashboard($this, array_values($keys));
     }
 
     public function value(): PendingValue
