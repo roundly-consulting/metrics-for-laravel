@@ -39,6 +39,14 @@ trait ComputesTrend
     }
 
     /**
+     * @return array<array-key, mixed>
+     */
+    protected function cacheDiscriminators(): array
+    {
+        return ['unit' => $this->unit->value];
+    }
+
+    /**
      * @param  Collection<array-key, mixed>  $aggregateResults
      */
     protected function toResult(Collection $aggregateResults): Result

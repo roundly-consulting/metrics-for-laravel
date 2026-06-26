@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace RoundlyConsulting\Metrics;
 
 use Illuminate\Contracts\Support\Arrayable;
+use RoundlyConsulting\Metrics\Concerns\Cacheable;
 use RoundlyConsulting\Metrics\Traits\Description;
 use RoundlyConsulting\Metrics\Traits\Humanize;
 use RoundlyConsulting\Metrics\Traits\Makeable;
@@ -22,6 +23,7 @@ use RoundlyConsulting\Metrics\Types\Result;
  */
 abstract class Metrics implements Arrayable
 {
+    use Cacheable;
     use Description;
     use Humanize;
     use Makeable;
@@ -78,7 +80,23 @@ abstract class Metrics implements Arrayable
                     'end' => $this->customRangeEnd,
                 ],
             ],
-            'result' => $this->calculate()->toArray(),
+            'result' => $this->resolveResultArray(),
         ];
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    protected function resolveResultArray(): array
+    {
+        if (! $this->cachingEnabled()) {
+            return $this->calculate()->toArray();
+        }
+
+        return $this->cacheRepository()->remember(
+            $this->resolveCacheKey(),
+            $this->resolveCacheTtl(),
+            fn (): array => $this->calculate()->toArray(),
+        );
     }
 }

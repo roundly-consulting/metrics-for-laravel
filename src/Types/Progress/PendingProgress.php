@@ -15,5 +15,6 @@ final class PendingProgress extends Metrics
     use BuildsValueMetric;
     use CalculatesProgress {
         CalculatesProgress::resolveResult insteadof AggregatesValues;
+        CalculatesProgress::cacheDiscriminators insteadof AggregatesValues;
     }
 }

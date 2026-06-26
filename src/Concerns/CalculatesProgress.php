@@ -31,6 +31,14 @@ trait CalculatesProgress
         return $this;
     }
 
+    /**
+     * @return array<array-key, mixed>
+     */
+    protected function cacheDiscriminators(): array
+    {
+        return ['target' => $this->target, 'avoid' => $this->avoid, 'change' => $this->withChange];
+    }
+
     protected function resolveResult(ValueResult $result): Result
     {
         $value = $result->value();

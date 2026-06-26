@@ -25,6 +25,14 @@ trait AggregatesValues
     }
 
     /**
+     * @return array<array-key, mixed>
+     */
+    protected function cacheDiscriminators(): array
+    {
+        return ['change' => $this->withChange];
+    }
+
+    /**
      * Hook for subclasses (e.g. Progress) to transform the value result.
      */
     protected function resolveResult(ValueResult $result): Result
