@@ -105,7 +105,7 @@ abstract class Trend extends Metrics
         $column = $grammar->wrap($column);
         $dateColumn = $dateColumn ?? $query->getModel()->getQualifiedCreatedAtColumn();
 
-        $expression = $this->resolveQueryExpression($query)->toSql($this->unit, $dateColumn);
+        $expression = $this->resolveQueryExpression($query)->toSql($this->unit->value, $dateColumn);
 
         // Resolve to the base query builder with global scopes applied so the raw
         // aggregate/grouping SQL runs against the same constraints (e.g. soft deletes).
@@ -134,7 +134,7 @@ abstract class Trend extends Metrics
     {
         $dates = [];
 
-        $period = $range->start()->toPeriod($range->end(), 1, $this->unit);
+        $period = $range->start()->toPeriod($range->end(), 1, $this->unit->value);
 
         foreach ($period as $stepInPeriod) {
             $stepInUnitFormat = $this->formatDatetimeToUnit($stepInPeriod);
