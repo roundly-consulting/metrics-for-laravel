@@ -15,7 +15,8 @@ final class ShowMetricCommand extends Command
 
     public function handle(MetricsManager $manager): int
     {
-        $key = (string) $this->argument('key');
+        $key = $this->input->getArgument('key');
+        $key = is_string($key) ? $key : '';
 
         if (! $manager->has($key)) {
             $this->error("No metric is registered under the [{$key}] key.");
