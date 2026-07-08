@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace RoundlyConsulting\Metrics\Enums;
 
+use RoundlyConsulting\Enums\Helpers;
 use RoundlyConsulting\Metrics\Exceptions\InvalidRangeException;
 use RoundlyConsulting\Metrics\Ranges\Custom;
 use RoundlyConsulting\Metrics\Ranges\Days;
@@ -25,6 +26,8 @@ use RoundlyConsulting\Metrics\Ranges\Yesterday;
 
 enum Period: string
 {
+    use Helpers;
+
     case Days7 = '7';
     case Days14 = '14';
     case Days30 = '30';
@@ -50,33 +53,36 @@ enum Period: string
 
     /**
      * The translatable label shown in range pickers.
+     *
+     * Overrides the trait's value-based headline because the backed values are
+     * wire tokens (7, WTD, MTD, …) that would headline poorly.
      */
-    public function label(): string
+    public function readable(): string
     {
-        return match ($this) {
-            self::Days7 => __('7 Days'),
-            self::Days14 => __('14 Days'),
-            self::Days30 => __('30 Days'),
-            self::Days60 => __('60 Days'),
-            self::Days90 => __('90 Days'),
-            self::Days365 => __('365 Days'),
-            self::Yesterday => __('Yesterday'),
-            self::Today => __('Today'),
-            self::WeekToDate => __('Week To Date'),
-            self::MonthToDate => __('Month To Date'),
-            self::QuarterToDate => __('Quarter To Date'),
-            self::YearToDate => __('Year To Date'),
-            self::ThisWeek => __('This Week'),
-            self::LastWeek => __('Last Week'),
-            self::ThisMonth => __('This Month'),
-            self::LastMonth => __('Last Month'),
-            self::ThisQuarter => __('This Quarter'),
-            self::LastQuarter => __('Last Quarter'),
-            self::ThisYear => __('This Year'),
-            self::LastYear => __('Last Year'),
-            self::Custom => __('Custom'),
-            self::All => __('All'),
-        };
+        return (string) __(match ($this) {
+            self::Days7 => '7 Days',
+            self::Days14 => '14 Days',
+            self::Days30 => '30 Days',
+            self::Days60 => '60 Days',
+            self::Days90 => '90 Days',
+            self::Days365 => '365 Days',
+            self::Yesterday => 'Yesterday',
+            self::Today => 'Today',
+            self::WeekToDate => 'Week To Date',
+            self::MonthToDate => 'Month To Date',
+            self::QuarterToDate => 'Quarter To Date',
+            self::YearToDate => 'Year To Date',
+            self::ThisWeek => 'This Week',
+            self::LastWeek => 'Last Week',
+            self::ThisMonth => 'This Month',
+            self::LastMonth => 'Last Month',
+            self::ThisQuarter => 'This Quarter',
+            self::LastQuarter => 'Last Quarter',
+            self::ThisYear => 'This Year',
+            self::LastYear => 'Last Year',
+            self::Custom => 'Custom',
+            self::All => 'All',
+        });
     }
 
     /**
@@ -105,21 +111,5 @@ enum Period: string
             self::Custom => new Custom(start: $start, end: $end),
             self::All => throw InvalidRangeException::for($this->value),
         };
-    }
-
-    /**
-     * The full catalogue of selectable periods keyed by their string value.
-     *
-     * @return array<array-key, string>
-     */
-    public static function options(): array
-    {
-        $options = [];
-
-        foreach (self::cases() as $case) {
-            $options[$case->value] = $case->label();
-        }
-
-        return $options;
     }
 }

@@ -6,15 +6,30 @@ namespace RoundlyConsulting\Metrics\Enums;
 
 use Carbon\CarbonInterface;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Str;
+use RoundlyConsulting\Enums\Helpers;
 
 enum Unit: string
 {
+    use Helpers;
+
     case Minute = 'MINUTE';
     case Hour = 'HOUR';
     case Day = 'DAY';
     case Week = 'WEEK';
     case Month = 'MONTH';
     case Year = 'YEAR';
+
+    /**
+     * The translatable label for the bucket unit.
+     *
+     * Overrides the trait's value-based headline because the backed values are
+     * uppercase tokens (MINUTE, HOUR, …) that would headline to "M I N U T E".
+     */
+    public function readable(): string
+    {
+        return (string) __(Str::headline($this->name));
+    }
 
     /**
      * Format a datetime into the bucket key for this unit (PHP side).

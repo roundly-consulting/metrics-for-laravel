@@ -25,7 +25,7 @@ trait Ranges
      */
     public function ranges(): array
     {
-        return Period::options();
+        return Period::toOptions()->all();
     }
 
     public function range(Period|string $range, ?string $customRangeStart = null, ?string $customRangeEnd = null): self
