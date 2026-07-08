@@ -363,6 +363,18 @@ $metric->unit(Unit::Hour);             // identical to ->unit('HOUR')
 $metric->range(Period::Custom, '2024-01-01 00:00:00', '2024-03-01 00:00:00');
 ```
 
+Both enums use the shared [`roundly-consulting/enums-for-laravel`](https://github.com/roundly-consulting/enums-for-laravel)
+helper trait, so they expose a full toolkit for building host selects and validation rules:
+
+```php
+Period::toOptions()->all();   // ['7' => '7 Days', ..., 'ALL' => 'All'] — value => label map
+Period::options();            // Collection<EnumOption> of {value, label, name} DTOs for JS/Inertia
+Period::validationRule();     // 'in:7,14,30,...,ALL'
+Unit::toOptions()->all();     // ['MINUTE' => 'Minute', ..., 'YEAR' => 'Year']
+Unit::validationRule();       // 'in:MINUTE,HOUR,DAY,WEEK,MONTH,YEAR'
+Unit::labels();               // Collection<string> of readable labels
+```
+
 ## Aggregate helpers
 
 Use these inside `calculate()` (or via the inline builders) to compute the result from an
@@ -385,7 +397,7 @@ column used for period filtering (defaults to the model's `created_at`):
 ## Date ranges
 
 Filter any metric with `range()`. The available keys come from `ranges()` /
-`Period::options()`:
+`Period::toOptions()`:
 
 | Key | Label | Key | Label |
 |---|---|---|---|
@@ -506,6 +518,37 @@ The published `config/metrics.php` documents every key:
 | `cache.prefix` | `string` | `metrics` | — |
 | `partition.other_label` | `string` | `Other` | — |
 | `trend_drivers` | `array` | mysql/mariadb/pgsql/sqlite | — |
+
+## Integrates with
+
+- **[`roundly-consulting/enums-for-laravel`](https://github.com/roundly-consulting/enums-for-laravel)**
+  (required) — the `Period` and `Unit` enums adopt its `Helpers` trait, giving you
+  `options()`/`toOptions()`/`labels()`/`values()`/`names()`/`validationRule()` plus name- and
+  label-based case lookups for host selects and validation. See [Enums](#enums).
+
+### Recipe: an event → metric sink
+
+`metrics-for-laravel` reads from your existing tables, so any other package's domain events can
+feed a metric with **no extra dependency** — this is host wiring, not a package `require`. Point a
+metric at the model the event writes, or record a lightweight counter and count that:
+
+```php
+use App\Models\Order;
+use Illuminate\Support\Facades\Event;
+use RoundlyConsulting\Metrics\Facades\Metric;
+
+// Register a metric over whatever table the events already populate.
+Metric::register('orders_today', fn () => Metric::value()->count(Order::query())->range('TODAY'));
+
+// Or fan a package's event into your own metrics table, then build a metric over it.
+Event::listen(OrderPlaced::class, function (OrderPlaced $event): void {
+    MetricEvent::create(['name' => 'order_placed', 'occurred_at' => now()]);
+});
+
+Metric::register('orders_placed', fn () => Metric::trend()
+    ->count(MetricEvent::query()->where('name', 'order_placed'), 'occurred_at')
+    ->daily());
+```
 
 ## Testing
 
