@@ -525,6 +525,11 @@ The published `config/metrics.php` documents every key:
   (required) — the `Period` and `Unit` enums adopt its `Helpers` trait, giving you
   `options()`/`toOptions()`/`labels()`/`values()`/`names()`/`validationRule()` plus name- and
   label-based case lookups for host selects and validation. See [Enums](#enums).
+- **[`roundly-consulting/package-toolkit-for-laravel`](https://github.com/roundly-consulting/package-toolkit-for-laravel)**
+  (required) — the package is bootstrapped with the toolkit's `PackageServiceProvider`, so its
+  config, publish tag and console commands are wired through the shared builder, and
+  `php artisan about` reports the registered metric count, the result-cache state and the default
+  range.
 
 ### Recipe: an event → metric sink
 
