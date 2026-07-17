@@ -10,6 +10,7 @@ use RoundlyConsulting\Metrics\Tests\Metrics\Trend\MinUsersBalanceMinutely;
 use RoundlyConsulting\Metrics\Tests\Metrics\Trend\Users;
 use RoundlyConsulting\Metrics\Tests\Metrics\Trend\UsersBalance;
 use RoundlyConsulting\Metrics\Tests\Metrics\Trend\UsersForMissingQueryExpression;
+use RoundlyConsulting\Testing\Database\DriverMatrix;
 
 it('returns balance metrics for all users daily', function () {
     createUsersForMetricsTesting([
@@ -224,8 +225,18 @@ it('returns empty result when no records are retrieved from database', function 
         ]);
 });
 
+/**
+ * The driver name is taken from the live connection rather than hard-coded to 'sqlite'.
+ * The literal made this case assert the wrong driver the moment the suite ran anywhere
+ * else — it is the exception's whole payload, so pinning it to one engine meant the
+ * message was only ever verified on sqlite.
+ */
 it('throws MissingTrendQueryExpressionException exception when no driver has been found', function () {
     config()->set('metrics.trend_drivers', []);
 
-    UsersForMissingQueryExpression::make()->toArray();
-})->throws(MissingTrendQueryExpressionException::class, 'Missing trend query expression for `sqlite` driver.');
+    expect(fn () => UsersForMissingQueryExpression::make()->toArray())
+        ->toThrow(
+            MissingTrendQueryExpressionException::class,
+            'Missing trend query expression for `'.DriverMatrix::driver().'` driver.',
+        );
+});
