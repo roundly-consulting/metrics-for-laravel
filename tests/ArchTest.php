@@ -2,13 +2,7 @@
 
 declare(strict_types=1);
 
-use RoundlyConsulting\Metrics\Exceptions\MetricsException;
-use RoundlyConsulting\Metrics\Metrics;
-use RoundlyConsulting\Metrics\Ranges\BaseRange;
-use RoundlyConsulting\Metrics\Types\Partition\Partition;
-use RoundlyConsulting\Metrics\Types\Progress\Progress;
-use RoundlyConsulting\Metrics\Types\Trend\Trend;
-use RoundlyConsulting\Metrics\Types\Value\Value;
+use RoundlyConsulting\Metrics\MetricsManager;
 use RoundlyConsulting\Testing\Arch\ArchPresets;
 
 /**
@@ -34,28 +28,22 @@ use RoundlyConsulting\Testing\Arch\ArchPresets;
 ArchPresets::strictTypes('RoundlyConsulting\Metrics');
 
 /**
- * The exemptions are every abstract base in the package, and they are the package's entire
- * public surface — a host writes metrics BY extending these:
+ * Exactly one exemption, and it is a seam the package itself consumes: `MetricsFake
+ * extends MetricsManager`, so `final` here is a PHP fatal rather than a style question.
+ * `Metric::fake()` is the documented entry point host apps call, and it returns that
+ * subclass. Named explicitly so the decision is visible and rot-checked — `shops` finalled
+ * its `ShopManager`, but nothing extends that one.
  *
- *   - Metrics, the root every metric type extends;
- *   - Value / Trend / Partition / Progress, the four metric types a host subclasses;
- *   - BaseRange, which all 20-odd shipped ranges extend and a host extends to add its own;
- *   - MetricsException, the base every metrics error extends so a host can catch uniformly.
- *
- * Enumerated explicitly rather than waved through: `finalByDefault` does not skip abstract
- * classes, so each one has to be named, and naming them is what makes a NEW un-final
- * concrete class fail here instead of hiding behind a blanket exemption.
+ * The seven abstract bases this list used to name are gone, and their removal is the point
+ * rather than tidying. `finalByDefault` skips abstract classes on its own (`abstract final`
+ * is a fatal, so flagging one was a false positive by construction), so every one of them
+ * silenced nothing it needed to — while `Metrics::class` silenced `MetricsManager` by
+ * string prefix, which is precisely why this preset ran green over a non-final class for
+ * the whole life of the package.
  */
-ArchPresets::finalByDefault('RoundlyConsulting\Metrics')
-    ->ignoring([
-        Metrics::class,
-        Value::class,
-        Trend::class,
-        Partition::class,
-        Progress::class,
-        BaseRange::class,
-        MetricsException::class,
-    ]);
+ArchPresets::finalByDefault('RoundlyConsulting\Metrics', [
+    MetricsManager::class,
+]);
 
 /**
  * Metrics does no cryptography. The ban matters here for one specific reason: the result
