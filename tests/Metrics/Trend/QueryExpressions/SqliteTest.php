@@ -19,7 +19,11 @@ it('returns correct query expression for each format', function () {
         "strftime('%Y-%m-%d %H:%M:00', datetime(created_at))",
         "strftime('%Y-%m-%d %H:00', datetime(created_at))",
         "strftime('%Y-%m-%d', datetime(created_at))",
-        "strftime('%Y-%W', datetime(created_at))",
+        // ISO-8601, computed: sqlite has no ISO week, and `%W` is not one — it counts
+        // from the first Monday with no year correction, so it produced `2023-00` where
+        // the other drivers said `2022-52`. The Thursday of a week decides its ISO year.
+        "strftime('%Y', date(created_at, '-3 days', 'weekday 4')) || '-' || "
+        ."printf('%02d', (strftime('%j', date(created_at, '-3 days', 'weekday 4')) - 1) / 7 + 1)",
         "strftime('%Y-%m', datetime(created_at))",
         "strftime('%Y', datetime(created_at))",
     ]);

@@ -19,7 +19,9 @@ it('returns correct query expression for each format', function () {
         "date_format(created_at, '%Y-%m-%d %H:%i:00')",
         "date_format(created_at, '%Y-%m-%d %H:00')",
         "date_format(created_at, '%Y-%m-%d')",
-        "date_format(created_at, '%Y-%v')",
+        // `%x`, not `%Y`: `%v` is an ISO week and `%x` is its documented ISO-year
+        // partner. `%Y-%v` mispaired an ISO week with a calendar year at every boundary.
+        "date_format(created_at, '%x-%v')",
         "date_format(created_at, '%Y-%m')",
         "date_format(created_at, '%Y')",
     ]);
