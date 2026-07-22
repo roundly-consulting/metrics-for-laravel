@@ -15,7 +15,9 @@ abstract class Trend extends Metrics
     use ComputesTrend;
 
     /**
-     * @param  Builder<Model>  $query
+     * @template TModel of Model
+     *
+     * @param  Builder<TModel>  $query
      */
     protected function count(Builder $query, string $column, ?string $dateColumn = null): Result
     {
@@ -23,7 +25,9 @@ abstract class Trend extends Metrics
     }
 
     /**
-     * @param  Builder<Model>  $query
+     * @template TModel of Model
+     *
+     * @param  Builder<TModel>  $query
      */
     protected function average(Builder $query, string $column, ?string $dateColumn = null): Result
     {
@@ -31,7 +35,9 @@ abstract class Trend extends Metrics
     }
 
     /**
-     * @param  Builder<Model>  $query
+     * @template TModel of Model
+     *
+     * @param  Builder<TModel>  $query
      */
     protected function sum(Builder $query, string $column, ?string $dateColumn = null): Result
     {
@@ -39,7 +45,9 @@ abstract class Trend extends Metrics
     }
 
     /**
-     * @param  Builder<Model>  $query
+     * @template TModel of Model
+     *
+     * @param  Builder<TModel>  $query
      */
     protected function max(Builder $query, string $column, ?string $dateColumn = null): Result
     {
@@ -47,7 +55,9 @@ abstract class Trend extends Metrics
     }
 
     /**
-     * @param  Builder<Model>  $query
+     * @template TModel of Model
+     *
+     * @param  Builder<TModel>  $query
      */
     protected function min(Builder $query, string $column, ?string $dateColumn = null): Result
     {

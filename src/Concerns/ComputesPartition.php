@@ -64,7 +64,7 @@ trait ComputesPartition
     }
 
     /**
-     * @param  Builder<Model>  $query
+     * @param  Builder<covariant Model>  $query
      */
     protected function aggregate(
         Builder $query,
@@ -140,7 +140,7 @@ trait ComputesPartition
     }
 
     /**
-     * @param  Builder<Model>  $query
+     * @param  Builder<covariant Model>  $query
      * @return array<array-key, float>
      */
     protected function getResults(Builder $query, string $function, string $groupBy, string $dateColumn, ?string $valueColumn): array

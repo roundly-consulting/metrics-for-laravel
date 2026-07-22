@@ -16,7 +16,7 @@ final class PendingTrend extends Metrics
     use ComputesTrend;
 
     /**
-     * @var Builder<Model>|null
+     * @var Builder<covariant Model>|null
      */
     private ?Builder $query = null;
 
@@ -27,7 +27,9 @@ final class PendingTrend extends Metrics
     private ?string $aggregateDateColumn = null;
 
     /**
-     * @param  Builder<Model>  $query
+     * @template TModel of Model
+     *
+     * @param  Builder<TModel>  $query
      */
     public function count(Builder $query, string $column, ?string $dateColumn = null): static
     {
@@ -35,7 +37,9 @@ final class PendingTrend extends Metrics
     }
 
     /**
-     * @param  Builder<Model>  $query
+     * @template TModel of Model
+     *
+     * @param  Builder<TModel>  $query
      */
     public function sum(Builder $query, string $column, ?string $dateColumn = null): static
     {
@@ -43,7 +47,9 @@ final class PendingTrend extends Metrics
     }
 
     /**
-     * @param  Builder<Model>  $query
+     * @template TModel of Model
+     *
+     * @param  Builder<TModel>  $query
      */
     public function average(Builder $query, string $column, ?string $dateColumn = null): static
     {
@@ -51,7 +57,9 @@ final class PendingTrend extends Metrics
     }
 
     /**
-     * @param  Builder<Model>  $query
+     * @template TModel of Model
+     *
+     * @param  Builder<TModel>  $query
      */
     public function max(Builder $query, string $column, ?string $dateColumn = null): static
     {
@@ -59,7 +67,9 @@ final class PendingTrend extends Metrics
     }
 
     /**
-     * @param  Builder<Model>  $query
+     * @template TModel of Model
+     *
+     * @param  Builder<TModel>  $query
      */
     public function min(Builder $query, string $column, ?string $dateColumn = null): static
     {
@@ -67,7 +77,9 @@ final class PendingTrend extends Metrics
     }
 
     /**
-     * @param  Builder<Model>  $query
+     * @template TModel of Model
+     *
+     * @param  Builder<TModel>  $query
      */
     private function withAggregate(string $function, Builder $query, string $column, ?string $dateColumn): static
     {

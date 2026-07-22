@@ -12,7 +12,7 @@ use RoundlyConsulting\Metrics\Types\Result;
 trait BuildsValueMetric
 {
     /**
-     * @var Builder<Model>|null
+     * @var Builder<covariant Model>|null
      */
     private ?Builder $query = null;
 
@@ -23,7 +23,9 @@ trait BuildsValueMetric
     private ?string $aggregateDateColumn = null;
 
     /**
-     * @param  Builder<Model>  $query
+     * @template TModel of Model
+     *
+     * @param  Builder<TModel>  $query
      */
     public function count(Builder $query, ?string $column = null, ?string $dateColumn = null): static
     {
@@ -31,7 +33,9 @@ trait BuildsValueMetric
     }
 
     /**
-     * @param  Builder<Model>  $query
+     * @template TModel of Model
+     *
+     * @param  Builder<TModel>  $query
      */
     public function sum(Builder $query, ?string $column = null, ?string $dateColumn = null): static
     {
@@ -39,7 +43,9 @@ trait BuildsValueMetric
     }
 
     /**
-     * @param  Builder<Model>  $query
+     * @template TModel of Model
+     *
+     * @param  Builder<TModel>  $query
      */
     public function average(Builder $query, ?string $column = null, ?string $dateColumn = null): static
     {
@@ -47,7 +53,9 @@ trait BuildsValueMetric
     }
 
     /**
-     * @param  Builder<Model>  $query
+     * @template TModel of Model
+     *
+     * @param  Builder<TModel>  $query
      */
     public function max(Builder $query, ?string $column = null, ?string $dateColumn = null): static
     {
@@ -55,7 +63,9 @@ trait BuildsValueMetric
     }
 
     /**
-     * @param  Builder<Model>  $query
+     * @template TModel of Model
+     *
+     * @param  Builder<TModel>  $query
      */
     public function min(Builder $query, ?string $column = null, ?string $dateColumn = null): static
     {
@@ -63,7 +73,9 @@ trait BuildsValueMetric
     }
 
     /**
-     * @param  Builder<Model>  $query
+     * @template TModel of Model
+     *
+     * @param  Builder<TModel>  $query
      */
     private function withAggregate(string $function, Builder $query, ?string $column, ?string $dateColumn): static
     {

@@ -80,7 +80,7 @@ trait ComputesTrend
     /**
      * Resolve the trend, branching to the grouped path when a series column is set.
      *
-     * @param  Builder<Model>  $query
+     * @param  Builder<covariant Model>  $query
      */
     protected function resolveTrend(Builder $query, string $function, string $column, ?string $dateColumn = null): Result
     {
@@ -115,7 +115,7 @@ trait ComputesTrend
     }
 
     /**
-     * @param  Builder<Model>  $query
+     * @param  Builder<covariant Model>  $query
      * @return Collection<array-key, mixed>
      */
     protected function aggregate(Builder $query, string $function, string $column, ?string $dateColumn = null): Collection
@@ -182,7 +182,7 @@ trait ComputesTrend
     /**
      * Compute a grouped, multi-series trend.
      *
-     * @param  Builder<Model>  $query
+     * @param  Builder<covariant Model>  $query
      */
     protected function toSeriesResult(Builder $query, string $function, string $column, ?string $dateColumn): Result
     {
@@ -254,7 +254,7 @@ trait ComputesTrend
     }
 
     /**
-     * @param  Builder<Model>  $query
+     * @param  Builder<covariant Model>  $query
      * @return Collection<int, array<array-key, mixed>>
      */
     protected function aggregateSeries(Builder $query, string $function, string $column, string $series, string $dateColumn): Collection
@@ -286,7 +286,7 @@ trait ComputesTrend
     }
 
     /**
-     * @param  Builder<Model>  $query
+     * @param  Builder<covariant Model>  $query
      */
     protected function resolveQueryExpression(Builder $query): QueryExpression
     {

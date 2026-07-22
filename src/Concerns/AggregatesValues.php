@@ -87,7 +87,7 @@ trait AggregatesValues
     }
 
     /**
-     * @param  Builder<Model>  $query
+     * @param  Builder<covariant Model>  $query
      */
     protected function aggregate(Builder $query, string $function, ?string $column = null, ?string $dateColumn = null): ValueResult
     {
@@ -135,7 +135,7 @@ trait AggregatesValues
     }
 
     /**
-     * @param  Builder<Model>  $query
+     * @param  Builder<covariant Model>  $query
      */
     protected function getResult(Builder $query, string $function, string $column): float
     {
@@ -147,7 +147,7 @@ trait AggregatesValues
     }
 
     /**
-     * @param  Builder<Model>  $query
+     * @param  Builder<covariant Model>  $query
      */
     protected function getResultForRange(
         Builder $query,

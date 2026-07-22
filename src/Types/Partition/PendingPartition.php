@@ -16,7 +16,7 @@ final class PendingPartition extends Metrics
     use ComputesPartition;
 
     /**
-     * @var Builder<Model>|null
+     * @var Builder<covariant Model>|null
      */
     private ?Builder $query = null;
 
@@ -29,7 +29,9 @@ final class PendingPartition extends Metrics
     private ?string $dateColumn = null;
 
     /**
-     * @param  Builder<Model>  $query
+     * @template TModel of Model
+     *
+     * @param  Builder<TModel>  $query
      */
     public function count(Builder $query, string $groupBy, ?string $valueColumn = null, ?string $dateColumn = null): static
     {
@@ -37,7 +39,9 @@ final class PendingPartition extends Metrics
     }
 
     /**
-     * @param  Builder<Model>  $query
+     * @template TModel of Model
+     *
+     * @param  Builder<TModel>  $query
      */
     public function sum(Builder $query, string $groupBy, ?string $valueColumn = null, ?string $dateColumn = null): static
     {
@@ -45,7 +49,9 @@ final class PendingPartition extends Metrics
     }
 
     /**
-     * @param  Builder<Model>  $query
+     * @template TModel of Model
+     *
+     * @param  Builder<TModel>  $query
      */
     public function average(Builder $query, string $groupBy, ?string $valueColumn = null, ?string $dateColumn = null): static
     {
@@ -53,7 +59,9 @@ final class PendingPartition extends Metrics
     }
 
     /**
-     * @param  Builder<Model>  $query
+     * @template TModel of Model
+     *
+     * @param  Builder<TModel>  $query
      */
     public function max(Builder $query, string $groupBy, ?string $valueColumn = null, ?string $dateColumn = null): static
     {
@@ -61,7 +69,9 @@ final class PendingPartition extends Metrics
     }
 
     /**
-     * @param  Builder<Model>  $query
+     * @template TModel of Model
+     *
+     * @param  Builder<TModel>  $query
      */
     public function min(Builder $query, string $groupBy, ?string $valueColumn = null, ?string $dateColumn = null): static
     {
@@ -69,7 +79,9 @@ final class PendingPartition extends Metrics
     }
 
     /**
-     * @param  Builder<Model>  $query
+     * @template TModel of Model
+     *
+     * @param  Builder<TModel>  $query
      */
     private function withAggregate(string $function, Builder $query, string $groupBy, ?string $valueColumn, ?string $dateColumn): static
     {
