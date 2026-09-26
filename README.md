@@ -476,6 +476,12 @@ $metric->dontCache();         // force a fresh computation
 The cache key is derived from the metric class, range, unit, and target, so different
 configurations never collide. Only the `result` portion is cached.
 
+Globally, `METRICS_CACHE_ENABLED` accepts `true`/`false`/`1`/`0`/`on`/`off`, and
+`METRICS_CACHE_TTL` is a whole number of seconds between `1` and `31536000` (one year) — the
+string `.env` produces is honoured. An unusable TTL throws
+`RoundlyConsulting\Metrics\Exceptions\InvalidConfigurationException` instead of silently
+falling back to 300 seconds.
+
 ## Number formatting
 
 Present values as currency, percentages, or abbreviated figures without touching your
@@ -514,7 +520,7 @@ The published `config/metrics.php` documents every key:
 | `precision` | `int` | `0` | — |
 | `cache.enabled` | `bool` | `false` | `METRICS_CACHE_ENABLED` |
 | `cache.store` | `?string` | `null` (default store) | `METRICS_CACHE_STORE` |
-| `cache.ttl` | `int` | `300` | `METRICS_CACHE_TTL` |
+| `cache.ttl` | `int` (1–31536000 s; digit strings accepted) | `300` | `METRICS_CACHE_TTL` |
 | `cache.prefix` | `string` | `metrics` | — |
 | `partition.other_label` | `string` | `Other` | — |
 | `trend_drivers` | `array` | mysql/mariadb/pgsql/sqlite | — |
