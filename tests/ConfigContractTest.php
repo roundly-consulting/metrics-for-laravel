@@ -29,10 +29,21 @@ it('ships exactly the config keys it reads', function (): void {
             'metrics.trend_drivers.sqlite',
         ],
 
+        // The two cache keys `.env` sets as strings are read through the toolkit's
+        // validating accessors — `Config::boolean('metrics.cache.enabled')` and
+        // `Config::using(…)->intBetween('metrics.cache.ttl', …)` — not a bare `config()`
+        // call, so the scraper needs telling that those literals are reads. Named exactly,
+        // not by a `metrics.` prefix: every other key must still prove itself through
+        // `config()`, and a literal that vanishes from src still fails the reverse check.
+        'extraReadPrefixes' => [
+            'metrics.cache.enabled',
+            'metrics.cache.ttl',
+        ],
+
         // Deliberately NO `excludeFromReverse` for the provider. The testing README's own
         // example excludes the service provider on the grounds that "a render is not a
-        // read" — but MetricsServiceProvider::contributesToAbout() calls
-        // config('metrics.default_range') and config('metrics.cache.enabled') for real
+        // read" — but MetricsServiceProvider::contributesToAbout() reads
+        // config('metrics.default_range') and the `metrics.cache.enabled` flag for real
         // inside the closure it renders from. Excluding it would discard readers and
         // weaken the reverse direction for nothing.
     ]);

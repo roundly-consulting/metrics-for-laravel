@@ -8,6 +8,8 @@ use Carbon\CarbonImmutable;
 use DateTimeInterface;
 use Illuminate\Contracts\Cache\Repository;
 use Illuminate\Support\Facades\Cache;
+use RoundlyConsulting\Metrics\Exceptions\InvalidConfigurationException;
+use RoundlyConsulting\PackageToolkit\Support\Config;
 
 trait Cacheable
 {
@@ -71,18 +73,25 @@ trait Cacheable
             return $this->shouldCache;
         }
 
-        return (bool) config('metrics.cache.enabled', false);
+        // `.env` hands the flag over as a string ('1', 'off', …), so parse it
+        // as a boolean rather than casting: (bool) 'off' would switch caching on.
+        return Config::boolean('metrics.cache.enabled');
     }
 
+    /**
+     * The per-metric TTL, else `metrics.cache.ttl` in seconds — accepted as an int
+     * or as the digit string `.env` produces (`METRICS_CACHE_TTL=600`), between one
+     * second and one year. A present but unusable value throws rather than
+     * silently falling back to the default.
+     */
     protected function resolveCacheTtl(): int
     {
         if ($this->cacheTtl !== null) {
             return $this->cacheTtl;
         }
 
-        $ttl = config('metrics.cache.ttl', 300);
-
-        return is_int($ttl) ? $ttl : 300;
+        return Config::using(InvalidConfigurationException::class)
+            ->intBetween('metrics.cache.ttl', 1, 31_536_000, 300);
     }
 
     protected function cacheRepository(): Repository

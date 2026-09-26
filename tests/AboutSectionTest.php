@@ -50,3 +50,16 @@ it('reports the result cache as enabled when it is on', function (): void {
         mustRender: ['Result cache', 'ENABLED'],
     );
 });
+
+/**
+ * `.env` hands the flag over as a string — `METRICS_CACHE_ENABLED=1` is `'1'`, not `true` —
+ * and caching treats it as on, so the section must too.
+ */
+it('reports the result cache as enabled for an env-style string flag', function (): void {
+    config()->set('metrics.cache.enabled', '1');
+
+    expect('metrics')->toLeakNoSecrets(
+        secrets: [Users::class],
+        mustRender: ['Result cache', 'ENABLED'],
+    );
+});

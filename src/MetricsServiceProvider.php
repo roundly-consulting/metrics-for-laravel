@@ -8,6 +8,7 @@ use RoundlyConsulting\Metrics\Commands\ListMetricsCommand;
 use RoundlyConsulting\Metrics\Commands\ShowMetricCommand;
 use RoundlyConsulting\PackageToolkit\Package;
 use RoundlyConsulting\PackageToolkit\PackageServiceProvider;
+use RoundlyConsulting\PackageToolkit\Support\Config;
 
 final class MetricsServiceProvider extends PackageServiceProvider
 {
@@ -25,7 +26,7 @@ final class MetricsServiceProvider extends PackageServiceProvider
 
                 return [
                     'Registered metrics' => (string) count(app(MetricsManager::class)->keys()),
-                    'Result cache' => config('metrics.cache.enabled') === true ? 'ENABLED' : 'OFF',
+                    'Result cache' => Config::boolean('metrics.cache.enabled') ? 'ENABLED' : 'OFF',
                     'Default range' => is_string($range) ? $range : 'ALL',
                 ];
             });
