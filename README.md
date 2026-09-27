@@ -24,8 +24,8 @@ Calculate value, trend, progress, and partition metrics from any Eloquent query.
 value with period-over-period change, a time series for charts, a progress bar against a
 target, or a partitioned breakdown for pie/bar charts. Build a metric inline in one fluent
 expression, or define a small reusable class. The package handles date ranges, aggregation,
-grouping, caching, and formatting, and hands back clean JSON-friendly data — Nova-style
-metrics without Nova, for any front-end.
+grouping, caching, and formatting, and hands back clean JSON-friendly data — dashboard
+metrics without an admin panel, for any front-end.
 
 ## Requirements
 
