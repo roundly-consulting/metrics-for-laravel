@@ -209,8 +209,10 @@ return response()->json(
 );
 ```
 
-Register a class-string, an instance, or a closure. `Metrics::get()` throws
-`RoundlyConsulting\Metrics\Exceptions\UnknownMetricException` for an unregistered key.
+Register a class-string, an instance, or a closure. Every `Metrics::get()` returns a new
+metric — a registered instance is copied — so a `range()` or `timezone()` applied to what it
+returns never leaks into the next call (or, under Octane, the next request). `Metrics::get()`
+throws `RoundlyConsulting\Metrics\Exceptions\UnknownMetricException` for an unregistered key.
 `Metrics::keys()` lists the registered keys without resolving them, `Metrics::has('revenue')`
 checks one, and `Metrics::unregister('revenue')` removes one (a no-op for an unknown key).
 
@@ -222,7 +224,7 @@ Metrics::get('revenue')->result()->value();   // the typed result of a registere
 |---|---|---|
 | `register(string $key, class-string\|Metric\|Closure $metric)` | `MetricsManager` | add a metric to the registry (chainable) |
 | `unregister(string $key)` | `MetricsManager` | remove it (chainable) |
-| `get(string $key)` | `Metric` | resolve one, tagged with its key |
+| `get(string $key)` | `Metric` | resolve one (a fresh copy), tagged with its key |
 | `has(string $key)` / `keys()` / `all()` | `bool` / `list<string>` / `array<string, Metric>` | inspect the registry |
 | `dashboard(array $keys)` | `Dashboard` | resolve many at once |
 | `value()` / `trend()` / `progress()` / `partition()` | a pending builder | build a metric inline |
@@ -319,6 +321,11 @@ Metrics::partition()
     ->toArray();
 ```
 
+The bucket is the rest rolled up with the metric's own aggregate: summed for `count()` and
+`sum()`, the largest value for `max()`, the smallest for `min()`, and the average of all the
+remaining rows (not of the group averages) for `average()`. A real group whose key equals the
+bucket's label is never one of the top N — it joins the bucket, so no group is overwritten.
+
 Map raw group keys to display labels with `labelUsing()` — raw keys stay available via the
 result's `keys()`, and the labels appear under a `labels` key:
 
@@ -372,25 +379,31 @@ $fake = Metrics::fake([
     'revenue'      => ['value' => 5000.0],   // an array is used as the raw result
 ]);
 
-// ...exercise the code under test...
+// ...exercise the code under test, e.g.:
+Metrics::get('active-users')->toArray();
+Metrics::forget('revenue');
 
 Metrics::assertResolved('active-users');
 $fake->assertResolvedTimes('active-users', 1);
 $fake->assertNotResolved('revenue');
-$fake->assertNothingResolved();
 
 // forget() and flushCache() are recorded, and the cache is left alone
 $fake->assertForgotten('revenue');          // by key, or by class for an unregistered metric
 $fake->assertNotForgotten('active-users');
-$fake->assertNothingForgotten();
-$fake->assertCacheFlushed();
 $fake->assertCacheNotFlushed();
 ```
 
-Canned results are never cached, so one test's canned value can't leak into the next.
+The opposite assertions are there for the tests where nothing should happen:
+
+```php
+$fake->assertNothingResolved();    // no metric was resolved at all
+$fake->assertNothingForgotten();   // forget() was never called
+$fake->assertCacheFlushed();       // flushCache() was called
+```
 
 Canned values may be a number, an array (raw result), a `Result`, or a full `Metric`
-instance.
+instance. Canned results are never cached — a canned `Metric` instance is used as a copy with
+caching switched off — so one test's canned value can't leak into the next.
 
 ## Configuring a metric
 
@@ -408,8 +421,9 @@ All metric types:
 - `suffix(string $suffix)`
 - `precision(int $precision = 0, RoundingMode $mode = RoundingMode::HalfAwayFromZero)`
 - `range(Period|string $range, ?string $customRangeStart = null, ?string $customRangeEnd = null)`
-- `timezone(?string $timezone)` — resolve this metric's ranges in an explicit timezone,
-  overriding `config('metrics.timezone')` and the app timezone
+- `timezone(?string $timezone)` — resolve this metric's ranges and label its trend buckets in
+  an explicit timezone, overriding `config('metrics.timezone')` and the app timezone (see
+  [Timezones](#timezones))
 - `ranges(): array` — the list of available range keys/labels
 - `formatUsing(Closure(float): string $formatter)` — see [Number formatting](#number-formatting)
 - `cache()`, `cacheFor()`, `cacheKey()`, `dontCache()` — see [Caching](#caching)
@@ -480,8 +494,9 @@ column used for period filtering (defaults to the model's `created_at`):
 
 > For **Trend** metrics, `$column` is required (it is the value aggregated over time).
 
-**Partition** — `$groupBy` is the column to group by, `$valueColumn` is the aggregated column
-(defaults to `$groupBy`), `$dateColumn` defaults to `created_at`:
+**Partition** — `$groupBy` is the column to group by, `$valueColumn` is the aggregated column,
+`$dateColumn` defaults to `created_at`. Without a `$valueColumn`, `count()` counts rows — so the
+`NULL` group (keyed `''`) reports its real size — and the other aggregates use `$groupBy`:
 
 - `count(Builder $query, string $groupBy, ?string $valueColumn = null, ?string $dateColumn = null)`
 - `average(...)`, `sum(...)`, `max(...)`, `min(...)` — same signature
@@ -512,23 +527,55 @@ $metric->range(Period::ThisQuarter);   // the full current quarter
 $metric->range('CUSTOM', '2024-01-01 00:00:00', '2024-03-01 00:00:00');
 ```
 
-Ranges resolve in `config('metrics.timezone')` (falling back to the app timezone). Labels run
-through Laravel's translator, so they can be localised in your app's translation files.
+Weeks are ISO weeks — Monday to Sunday — whatever the app locale, the same weeks the `WEEK`
+trend buckets count. Quarter and year-to-date comparisons never overflow on month-end days
+(on 12-31, `LAST_QUARTER` is Q3; on a leap day, the previous `YTD` ends on 02-28). The previous
+period of a `CUSTOM` range is the window of exactly the same length that ends one second before
+it starts. Labels run through Laravel's translator, so they can be localised in your app's
+translation files.
+
+### Timezones
+
+A metric has a **reporting timezone** — `timezone()` on the metric (or `Dashboard::timezone()`),
+else `config('metrics.timezone')`, else the app timezone. Ranges are resolved in it (`TODAY` is
+today there, and `CUSTOM` bounds are read as its wall clock), and trend buckets are labelled in
+it.
+
+Timestamps are taken to be stored in the **app timezone** (`config('app.timezone')`), which is
+how Eloquent writes them. Range bounds are converted to it before they reach the query, and a
+trend moves each row's timestamp onto the reporting clock before bucketing it — daylight-saving
+changes of either zone included — so a row stored at `2026-09-14 23:30` UTC counts as
+`2026-09-15` in `Europe/Bratislava`:
+
+```php
+config(['metrics.timezone' => 'Europe/Bratislava']);   // app timezone: UTC
+
+Metrics::value()->count(User::query())->range('TODAY')->result()->value();
+Metrics::trend()->count(User::query(), 'id')->hourly()->range('TODAY')->result()->trends();
+// ['2026-09-15 00:00' => ..., '2026-09-15 01:00' => ..., ...] — local hours
+```
+
+A `date` column (no time of day) has no timezone to convert from; aggregate one with the
+reporting timezone left at the app timezone.
 
 ## Trend units
 
 Trend results are grouped by a date column formatted to the chosen unit (default `DAY`).
 Available units are `MINUTE`, `HOUR`, `DAY`, `WEEK`, `MONTH`, and `YEAR`. Grouping uses a
 database-specific SQL date expression: **MySQL, MariaDB, PostgreSQL, and SQLite** are
-supported out of the box. To support another driver, map it in
-`config('metrics.trend_drivers')` or register an implementation of
-`RoundlyConsulting\Metrics\Types\Trend\QueryExpressions\QueryExpression` in
-`Trend::$queryExpressions` keyed by the driver name.
+supported out of the box. To support another driver, implement
+`RoundlyConsulting\Metrics\Types\Trend\QueryExpressions\QueryExpression` — `toSql()` formats a
+column into the unit's bucket key, `addMinutes()` shifts a column onto the reporting clock — and
+map it in `config('metrics.trend_drivers')` under the driver name (at runtime:
+`config(['metrics.trend_drivers.oracle' => OracleExpression::class])`). The config map is the
+only driver registry, used by class-based trends and `Metrics::trend()` alike.
 
 ### Gap filling
 
 Every bucket in the selected range is present in the output — empty buckets are filled with
-`0` so charts have a continuous axis. Opt out with `withoutGapFilling()` to return only the
+`0` so charts have a continuous axis. The axis starts at the bucket that holds the range start
+(the ISO week of January 1st for a weekly `YTD`, the month of the start for a monthly `90`), so
+the bucket holding "now" is always there. Opt out with `withoutGapFilling()` to return only the
 buckets that actually have rows:
 
 ```php
@@ -565,10 +612,12 @@ $metric->cacheKey('users');   // override the derived cache key
 $metric->dontCache();         // force a fresh computation
 ```
 
-The cache key is derived from the metric class, its registry key, the range and timezone, the
-type's options (unit, target, comparison, limit…) and — for inline builders — the query and
-aggregate, so different metrics never collide. Only the `result` portion is cached, as plain
-data: `result()` rebuilds the typed object from it.
+The cache key is derived from the metric class, its registry key, the range, the reporting and
+app timezones, the precision and rounding mode, the type's options (unit, target, comparison,
+limit, the translated "Other" label…) and — for inline builders — the query and aggregate, so
+different metrics never collide. Only the `result` portion is cached, as plain data: `result()`
+rebuilds the typed object from it. Presentation is applied on every read and never cached —
+`formatUsing()` and a partition's `labelUsing()` labels.
 
 ### Forgetting cached results
 

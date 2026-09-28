@@ -17,11 +17,15 @@ Initial public release.
 - `result()` on every metric returns its typed result object (`ValueResult`, `TrendResult`,
   `ProgressResult`, `PartitionResult`), cached or fresh; `toArray()` stays the JSON envelope.
 - Count, sum, average, min and max aggregates over date ranges such as today, month to date,
-  last quarter or a custom range, resolved in a configurable timezone.
+  last quarter or a custom range, resolved in a configurable reporting timezone: range bounds
+  are converted to the app timezone the rows are stored in, and trend buckets are labelled in
+  the reporting timezone (daylight saving included). Weeks are ISO weeks in every locale.
 - Period-over-period change, with `compareTo()` for any comparison range.
 - Trends by minute, hour, day, week, month or year, with gap filling and multi-series support on
-  MySQL, MariaDB, PostgreSQL and SQLite.
-- Top-N partitions with an "Other" bucket, and display labels via `labelUsing()`.
+  MySQL, MariaDB, PostgreSQL and SQLite; other drivers plug in through
+  `config('metrics.trend_drivers')`, the one driver registry.
+- Top-N partitions with an "Other" bucket rolled up with the metric's own aggregate, and
+  display labels via `labelUsing()` (resolved on every read, never cached).
 - A metric registry (`register()`, `unregister()`, `get()`, `has()`, `keys()`, `all()`) and
   batch dashboards (`Metrics::dashboard()`); metrics and dashboards can be returned straight
   from a controller as JSON. The injectable `MetricsManager` serves the same API without the
@@ -49,4 +53,20 @@ Initial public release.
 - Cached inline builders and registered metrics of the same class no longer share one cache
   entry: the key now includes the registry key and the builder's query and aggregate.
 - `Metrics::fake()` no longer drops the metrics registered before it, and never caches a canned
-  result.
+  result — a canned `Metric` instance included.
+- Ranges resolved in `metrics.timezone` are converted to the storage timezone before querying,
+  instead of being applied to UTC rows as local wall clock; trend buckets are labelled in the
+  reporting timezone.
+- Gap filling starts at the bucket holding the range start, so the current week/month/year is
+  never dropped and monthly steps no longer overflow past short months; buckets the database
+  returns are never discarded. Bucket keys parse with `!` formats (no "today" fill-ins).
+- Week ranges start on Monday whatever the locale; quarter and year-to-date ranges no longer
+  overflow on month-end days; a custom range's previous period is exactly as long and ends one
+  second before it.
+- A partition's "Other" bucket no longer overwrites a real group of that name, and `count()`
+  without a value column counts the `NULL` group's rows.
+- The result cache key includes precision, rounding mode, the reporting and app timezones and
+  the translated "Other" label.
+- `Metrics::get()` hands out a copy of a registered instance, so one caller's `range()` or
+  `timezone()` never reaches the next; trend and partition builders no longer add their SQL to
+  the query they were given.
