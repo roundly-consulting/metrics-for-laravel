@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-use RoundlyConsulting\Metrics\Facades\Metric;
+use RoundlyConsulting\Metrics\Facades\Metrics;
 use RoundlyConsulting\Metrics\Tests\Metrics\Value\Users;
 
 /**
@@ -19,7 +19,7 @@ use RoundlyConsulting\Metrics\Tests\Metrics\Value\Users;
  * it to that, and the reason the count is the only safe thing to render.
  */
 it('renders the metrics section without leaking the metrics it registers', function (): void {
-    Metric::register('users', Users::class);
+    Metrics::register('users', Users::class);
 
     expect('metrics')->toLeakNoSecrets(
         secrets: [

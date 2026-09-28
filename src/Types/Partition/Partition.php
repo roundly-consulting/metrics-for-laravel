@@ -7,9 +7,9 @@ namespace RoundlyConsulting\Metrics\Types\Partition;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use RoundlyConsulting\Metrics\Concerns\ComputesPartition;
-use RoundlyConsulting\Metrics\Metrics;
+use RoundlyConsulting\Metrics\Metric;
 
-abstract class Partition extends Metrics
+abstract class Partition extends Metric
 {
     use ComputesPartition;
 

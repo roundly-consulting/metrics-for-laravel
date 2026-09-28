@@ -8,10 +8,10 @@ use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use RoundlyConsulting\Metrics\Concerns\ComputesPartition;
 use RoundlyConsulting\Metrics\Exceptions\IncompleteMetricException;
-use RoundlyConsulting\Metrics\Metrics;
+use RoundlyConsulting\Metrics\Metric;
 use RoundlyConsulting\Metrics\Types\Result;
 
-final class PendingPartition extends Metrics
+final class PendingPartition extends Metric
 {
     use ComputesPartition;
 
@@ -92,6 +92,14 @@ final class PendingPartition extends Metrics
         $this->dateColumn = $dateColumn;
 
         return $this;
+    }
+
+    /**
+     * @return array<array-key, mixed>
+     */
+    protected function cacheIdentity(): array
+    {
+        return [$this->aggregateFunction, $this->groupBy, $this->valueColumn, $this->dateColumn, $this->queryIdentity($this->query)];
     }
 
     protected function calculate(): Result

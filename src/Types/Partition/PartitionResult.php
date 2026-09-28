@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace RoundlyConsulting\Metrics\Types\Partition;
 
+use RoundlyConsulting\Metrics\Support\Cast;
 use RoundlyConsulting\Metrics\Types\Result;
 
 final class PartitionResult implements Result
@@ -16,6 +17,14 @@ final class PartitionResult implements Result
         protected array $results = [],
         protected array $labels = [],
     ) {}
+
+    /**
+     * @param  array<string, mixed>  $data
+     */
+    public static function fromArray(array $data): self
+    {
+        return new self(Cast::floats($data['partitions'] ?? null), Cast::strings($data['labels'] ?? null));
+    }
 
     /**
      * @return array<array-key, float>

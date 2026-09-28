@@ -6,9 +6,9 @@ namespace RoundlyConsulting\Metrics\Types\Value;
 
 use RoundlyConsulting\Metrics\Concerns\AggregatesValues;
 use RoundlyConsulting\Metrics\Concerns\BuildsValueMetric;
-use RoundlyConsulting\Metrics\Metrics;
+use RoundlyConsulting\Metrics\Metric;
 
-final class PendingValue extends Metrics
+final class PendingValue extends Metric
 {
     use AggregatesValues;
     use BuildsValueMetric;

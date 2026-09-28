@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 use RoundlyConsulting\Metrics\Enums\Period;
 use RoundlyConsulting\Metrics\Exceptions\IncompleteMetricException;
-use RoundlyConsulting\Metrics\Facades\Metric;
+use RoundlyConsulting\Metrics\Facades\Metrics;
 use RoundlyConsulting\Metrics\Tests\Metrics\Partition\Users as PartitionUsers;
 use RoundlyConsulting\Metrics\Tests\Metrics\Progress\Users as ProgressUsers;
 use RoundlyConsulting\Metrics\Tests\Metrics\Trend\UsersBalance;
@@ -23,7 +23,7 @@ it('builds an ad-hoc value identical to a subclass', function (): void {
         ->withChangeAgainstPreviousPeriod()
         ->toArray();
 
-    $inline = Metric::value()
+    $inline = Metrics::value()
         ->count(User::query())
         ->name('X')
         ->range(Period::Today)
@@ -42,7 +42,7 @@ it('builds an ad-hoc trend with a unit and range identical to a subclass', funct
 
     $subclass = UsersBalance::make()->name('X')->daily()->toArray();
 
-    $inline = Metric::trend()
+    $inline = Metrics::trend()
         ->sum(User::query(), 'balance')
         ->name('X')
         ->daily()
@@ -60,7 +60,7 @@ it('builds an ad-hoc progress with a target identical to a subclass', function (
 
     $subclass = ProgressUsers::make()->name('X')->target(5)->toArray();
 
-    $inline = Metric::progress()
+    $inline = Metrics::progress()
         ->count(User::query())
         ->name('X')
         ->target(5)
@@ -79,7 +79,7 @@ it('builds an ad-hoc partition identical to a subclass', function (): void {
 
     $subclass = PartitionUsers::make('type')->name('X')->toArray();
 
-    $inline = Metric::partition()
+    $inline = Metrics::partition()
         ->count(User::query(), 'type')
         ->name('X')
         ->toArray();
@@ -88,13 +88,13 @@ it('builds an ad-hoc partition identical to a subclass', function (): void {
 });
 
 it('throws when an ad-hoc value is resolved without a query', function (): void {
-    Metric::value()->toArray();
+    Metrics::value()->toArray();
 })->throws(IncompleteMetricException::class);
 
 it('throws when an ad-hoc trend is resolved without a query', function (): void {
-    Metric::trend()->toArray();
+    Metrics::trend()->toArray();
 })->throws(IncompleteMetricException::class);
 
 it('throws when an ad-hoc partition is resolved without a query', function (): void {
-    Metric::partition()->toArray();
+    Metrics::partition()->toArray();
 })->throws(IncompleteMetricException::class);

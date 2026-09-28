@@ -3,7 +3,7 @@
 declare(strict_types=1);
 
 use RoundlyConsulting\Metrics\Exceptions\MissingTrendQueryExpressionException;
-use RoundlyConsulting\Metrics\Facades\Metric;
+use RoundlyConsulting\Metrics\Facades\Metrics;
 use RoundlyConsulting\Metrics\Tests\Metrics\Partition\Users as PartitionUsers;
 use RoundlyConsulting\Metrics\Tests\Metrics\Progress\Users as ProgressUsers;
 use RoundlyConsulting\Metrics\Tests\Metrics\Trend\UsersBalance;
@@ -18,7 +18,7 @@ beforeEach(function (): void {
 });
 
 it('builds ad-hoc value metrics for every aggregate', function (string $method, float $expected): void {
-    $metrics = Metric::value()->{$method}(User::query(), 'balance')->toArray();
+    $metrics = Metrics::value()->{$method}(User::query(), 'balance')->toArray();
 
     expect($metrics['result']['value'])->toBe($expected);
 })->with([
@@ -29,13 +29,13 @@ it('builds ad-hoc value metrics for every aggregate', function (string $method, 
 ]);
 
 it('builds ad-hoc trend metrics for every aggregate', function (string $method): void {
-    $metrics = Metric::trend()->{$method}(User::query(), 'balance')->daily()->toArray();
+    $metrics = Metrics::trend()->{$method}(User::query(), 'balance')->daily()->toArray();
 
     expect($metrics['result']['trends'])->toBeArray()->not->toBeEmpty();
 })->with(['count', 'sum', 'average', 'max', 'min']);
 
 it('builds ad-hoc partition metrics for every aggregate', function (string $method): void {
-    $metrics = Metric::partition()->{$method}(User::query(), 'type', 'balance')->toArray();
+    $metrics = Metrics::partition()->{$method}(User::query(), 'type', 'balance')->toArray();
 
     expect($metrics['result']['partitions'])->toHaveKeys(['user', 'admin']);
 })->with(['count', 'sum', 'average', 'max', 'min']);
@@ -49,7 +49,7 @@ it('caches trend, progress and partition metrics', function (): void {
 });
 
 it('caches a value metric for a fixed number of seconds', function (): void {
-    $metrics = Metric::value()->count(User::query())->cacheFor(60)->toArray();
+    $metrics = Metrics::value()->count(User::query())->cacheFor(60)->toArray();
 
     expect($metrics['result']['value'])->toBe(3.0);
 });

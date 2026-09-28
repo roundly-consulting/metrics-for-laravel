@@ -14,7 +14,6 @@ use RoundlyConsulting\Metrics\Ranges\Custom;
 use RoundlyConsulting\Metrics\Ranges\Range;
 use RoundlyConsulting\Metrics\Support\RawExpression;
 use RoundlyConsulting\Metrics\Traits\Unit;
-use RoundlyConsulting\Metrics\Types\Result;
 use RoundlyConsulting\Metrics\Types\Trend\QueryExpressions\QueryExpression;
 use RoundlyConsulting\Metrics\Types\Trend\TrendResult;
 use stdClass;
@@ -78,11 +77,19 @@ trait ComputesTrend
     }
 
     /**
+     * The metric's result, calculated or restored from the result cache.
+     */
+    public function result(): TrendResult
+    {
+        return $this->resultOf(TrendResult::class);
+    }
+
+    /**
      * Resolve the trend, branching to the grouped path when a series column is set.
      *
      * @param  Builder<covariant Model>  $query
      */
-    protected function resolveTrend(Builder $query, string $function, string $column, ?string $dateColumn = null): Result
+    protected function resolveTrend(Builder $query, string $function, string $column, ?string $dateColumn = null): TrendResult
     {
         if ($this->seriesColumn === null) {
             return $this->toResult($this->aggregate($query, $function, $column, $dateColumn));
@@ -94,7 +101,7 @@ trait ComputesTrend
     /**
      * @param  Collection<array-key, mixed>  $aggregateResults
      */
-    protected function toResult(Collection $aggregateResults): Result
+    protected function toResult(Collection $aggregateResults): TrendResult
     {
         if ($this->range === 'ALL') {
             if ($aggregateResults->isEmpty()) {
@@ -184,7 +191,7 @@ trait ComputesTrend
      *
      * @param  Builder<covariant Model>  $query
      */
-    protected function toSeriesResult(Builder $query, string $function, string $column, ?string $dateColumn): Result
+    protected function toSeriesResult(Builder $query, string $function, string $column, ?string $dateColumn): TrendResult
     {
         $dateColumn = $dateColumn ?? $query->getModel()->getQualifiedCreatedAtColumn();
 

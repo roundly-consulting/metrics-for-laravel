@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace RoundlyConsulting\Metrics\Types\Trend;
 
+use RoundlyConsulting\Metrics\Support\Cast;
 use RoundlyConsulting\Metrics\Types\Result;
 
 final class TrendResult implements Result
@@ -16,6 +17,20 @@ final class TrendResult implements Result
         protected array $results = [],
         protected array $series = [],
     ) {}
+
+    /**
+     * @param  array<string, mixed>  $data
+     */
+    public static function fromArray(array $data): self
+    {
+        $series = [];
+
+        foreach (is_array($data['series'] ?? null) ? $data['series'] : [] as $name => $buckets) {
+            $series[(string) $name] = Cast::floats($buckets);
+        }
+
+        return new self(Cast::floats($data['trends'] ?? null), $series);
+    }
 
     /**
      * @return array<string, float>

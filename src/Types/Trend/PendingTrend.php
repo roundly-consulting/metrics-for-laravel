@@ -8,10 +8,10 @@ use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use RoundlyConsulting\Metrics\Concerns\ComputesTrend;
 use RoundlyConsulting\Metrics\Exceptions\IncompleteMetricException;
-use RoundlyConsulting\Metrics\Metrics;
+use RoundlyConsulting\Metrics\Metric;
 use RoundlyConsulting\Metrics\Types\Result;
 
-final class PendingTrend extends Metrics
+final class PendingTrend extends Metric
 {
     use ComputesTrend;
 
@@ -89,6 +89,14 @@ final class PendingTrend extends Metrics
         $this->aggregateDateColumn = $dateColumn;
 
         return $this;
+    }
+
+    /**
+     * @return array<array-key, mixed>
+     */
+    protected function cacheIdentity(): array
+    {
+        return [$this->aggregateFunction, $this->aggregateColumn, $this->aggregateDateColumn, $this->queryIdentity($this->query)];
     }
 
     protected function calculate(): Result

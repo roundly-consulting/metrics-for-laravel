@@ -6,7 +6,6 @@ namespace RoundlyConsulting\Metrics\Concerns;
 
 use RoundlyConsulting\Metrics\Traits\PercentageCalculator;
 use RoundlyConsulting\Metrics\Types\Progress\ProgressResult;
-use RoundlyConsulting\Metrics\Types\Result;
 use RoundlyConsulting\Metrics\Types\Value\ValueResult;
 
 trait CalculatesProgress
@@ -46,7 +45,15 @@ trait CalculatesProgress
         ];
     }
 
-    protected function resolveResult(ValueResult $result): Result
+    /**
+     * The metric's result, calculated or restored from the result cache.
+     */
+    public function result(): ProgressResult
+    {
+        return $this->resultOf(ProgressResult::class);
+    }
+
+    protected function resolveResult(ValueResult $result): ProgressResult
     {
         $value = $result->value();
         $previous = $result->previous();
@@ -68,6 +75,7 @@ trait CalculatesProgress
                 roundingPrecision: $this->roundingPrecision,
                 roundingMode: $this->roundingMode,
             ),
+            change: $result->change(),
         );
     }
 }

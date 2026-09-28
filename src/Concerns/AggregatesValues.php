@@ -10,7 +10,6 @@ use RoundlyConsulting\Metrics\Enums\Period;
 use RoundlyConsulting\Metrics\Exceptions\InvalidRangeException;
 use RoundlyConsulting\Metrics\Ranges\Range;
 use RoundlyConsulting\Metrics\Traits\PercentageCalculator;
-use RoundlyConsulting\Metrics\Types\Result;
 use RoundlyConsulting\Metrics\Types\Value\ValueResult;
 
 trait AggregatesValues
@@ -79,9 +78,17 @@ trait AggregatesValues
     }
 
     /**
+     * The metric's result, calculated or restored from the result cache.
+     */
+    public function result(): ValueResult
+    {
+        return $this->resultOf(ValueResult::class);
+    }
+
+    /**
      * Hook for subclasses (e.g. Progress) to transform the value result.
      */
-    protected function resolveResult(ValueResult $result): Result
+    protected function resolveResult(ValueResult $result): ValueResult
     {
         return $result;
     }

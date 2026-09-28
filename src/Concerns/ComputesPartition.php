@@ -22,6 +22,14 @@ trait ComputesPartition
     protected ?Closure $labelResolver = null;
 
     /**
+     * The metric's result, calculated or restored from the result cache.
+     */
+    public function result(): PartitionResult
+    {
+        return $this->resultOf(PartitionResult::class);
+    }
+
+    /**
      * Cap the partition to the top N groups, rolling the remainder into a
      * single "Other" bucket.
      */

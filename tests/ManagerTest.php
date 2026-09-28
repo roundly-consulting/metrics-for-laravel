@@ -3,7 +3,7 @@
 declare(strict_types=1);
 
 use RoundlyConsulting\Metrics\Exceptions\UnknownMetricException;
-use RoundlyConsulting\Metrics\Facades\Metric;
+use RoundlyConsulting\Metrics\Facades\Metrics;
 use RoundlyConsulting\Metrics\MetricsManager;
 use RoundlyConsulting\Metrics\Tests\Metrics\Value\Users;
 use RoundlyConsulting\Metrics\Types\Partition\PendingPartition;
@@ -12,41 +12,41 @@ use RoundlyConsulting\Metrics\Types\Trend\PendingTrend;
 use RoundlyConsulting\Metrics\Types\Value\PendingValue;
 
 it('registers and resolves metrics by key', function (): void {
-    Metric::register('users', Users::class);
+    Metrics::register('users', Users::class);
 
-    expect(Metric::get('users'))->toBeInstanceOf(Users::class)
-        ->and(Metric::has('users'))->toBeTrue()
-        ->and(Metric::get('users')->key())->toBe('users');
+    expect(Metrics::get('users'))->toBeInstanceOf(Users::class)
+        ->and(Metrics::has('users'))->toBeTrue()
+        ->and(Metrics::get('users')->key())->toBe('users');
 });
 
 it('lists registered metric keys without resolving them', function (): void {
-    Metric::register('a', Users::class);
-    Metric::register('b', Users::class);
+    Metrics::register('a', Users::class);
+    Metrics::register('b', Users::class);
 
-    expect(Metric::keys())->toBe(['a', 'b']);
+    expect(Metrics::keys())->toBe(['a', 'b']);
 });
 
 it('resolves a registered instance and closure', function (): void {
     $instance = Users::make();
 
-    Metric::register('instance', $instance);
-    Metric::register('closure', fn () => Users::make());
+    Metrics::register('instance', $instance);
+    Metrics::register('closure', fn () => Users::make());
 
-    expect(Metric::get('instance'))->toBe($instance)
-        ->and(Metric::get('closure'))->toBeInstanceOf(Users::class);
+    expect(Metrics::get('instance'))->toBe($instance)
+        ->and(Metrics::get('closure'))->toBeInstanceOf(Users::class);
 });
 
 it('returns all registered metrics resolved', function (): void {
-    Metric::register('a', Users::class);
-    Metric::register('b', fn () => Users::make());
+    Metrics::register('a', Users::class);
+    Metrics::register('b', fn () => Users::make());
 
-    expect(Metric::all())
+    expect(Metrics::all())
         ->toHaveKeys(['a', 'b'])
         ->each->toBeInstanceOf(Users::class);
 });
 
 it('throws when resolving an unknown metric key', function (): void {
-    Metric::get('does-not-exist');
+    Metrics::get('does-not-exist');
 })->throws(UnknownMetricException::class, 'No metric is registered under the `does-not-exist` key.');
 
 it('resolves the manager as a singleton', function (): void {
@@ -54,8 +54,8 @@ it('resolves the manager as a singleton', function (): void {
 });
 
 it('exposes ad-hoc builders from the facade', function (): void {
-    expect(Metric::value())->toBeInstanceOf(PendingValue::class)
-        ->and(Metric::trend())->toBeInstanceOf(PendingTrend::class)
-        ->and(Metric::progress())->toBeInstanceOf(PendingProgress::class)
-        ->and(Metric::partition())->toBeInstanceOf(PendingPartition::class);
+    expect(Metrics::value())->toBeInstanceOf(PendingValue::class)
+        ->and(Metrics::trend())->toBeInstanceOf(PendingTrend::class)
+        ->and(Metrics::progress())->toBeInstanceOf(PendingProgress::class)
+        ->and(Metrics::partition())->toBeInstanceOf(PendingPartition::class);
 });

@@ -7,10 +7,9 @@ namespace RoundlyConsulting\Metrics\Types\Trend;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use RoundlyConsulting\Metrics\Concerns\ComputesTrend;
-use RoundlyConsulting\Metrics\Metrics;
-use RoundlyConsulting\Metrics\Types\Result;
+use RoundlyConsulting\Metrics\Metric;
 
-abstract class Trend extends Metrics
+abstract class Trend extends Metric
 {
     use ComputesTrend;
 
@@ -19,7 +18,7 @@ abstract class Trend extends Metrics
      *
      * @param  Builder<TModel>  $query
      */
-    protected function count(Builder $query, string $column, ?string $dateColumn = null): Result
+    protected function count(Builder $query, string $column, ?string $dateColumn = null): TrendResult
     {
         return $this->resolveTrend($query, 'count', $column, $dateColumn);
     }
@@ -29,7 +28,7 @@ abstract class Trend extends Metrics
      *
      * @param  Builder<TModel>  $query
      */
-    protected function average(Builder $query, string $column, ?string $dateColumn = null): Result
+    protected function average(Builder $query, string $column, ?string $dateColumn = null): TrendResult
     {
         return $this->resolveTrend($query, 'avg', $column, $dateColumn);
     }
@@ -39,7 +38,7 @@ abstract class Trend extends Metrics
      *
      * @param  Builder<TModel>  $query
      */
-    protected function sum(Builder $query, string $column, ?string $dateColumn = null): Result
+    protected function sum(Builder $query, string $column, ?string $dateColumn = null): TrendResult
     {
         return $this->resolveTrend($query, 'sum', $column, $dateColumn);
     }
@@ -49,7 +48,7 @@ abstract class Trend extends Metrics
      *
      * @param  Builder<TModel>  $query
      */
-    protected function max(Builder $query, string $column, ?string $dateColumn = null): Result
+    protected function max(Builder $query, string $column, ?string $dateColumn = null): TrendResult
     {
         return $this->resolveTrend($query, 'max', $column, $dateColumn);
     }
@@ -59,7 +58,7 @@ abstract class Trend extends Metrics
      *
      * @param  Builder<TModel>  $query
      */
-    protected function min(Builder $query, string $column, ?string $dateColumn = null): Result
+    protected function min(Builder $query, string $column, ?string $dateColumn = null): TrendResult
     {
         return $this->resolveTrend($query, 'min', $column, $dateColumn);
     }

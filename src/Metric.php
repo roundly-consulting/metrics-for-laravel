@@ -11,6 +11,8 @@ use Illuminate\Http\Request;
 use RoundlyConsulting\Metrics\Concerns\Cacheable;
 use RoundlyConsulting\Metrics\Concerns\FormatsValues;
 use RoundlyConsulting\Metrics\Events\MetricCalculated;
+use RoundlyConsulting\Metrics\Exceptions\UnexpectedResultException;
+use RoundlyConsulting\Metrics\Support\ResultCache;
 use RoundlyConsulting\Metrics\Traits\Description;
 use RoundlyConsulting\Metrics\Traits\Humanize;
 use RoundlyConsulting\Metrics\Traits\Makeable;
@@ -22,11 +24,15 @@ use RoundlyConsulting\Metrics\Traits\Suffix;
 use RoundlyConsulting\Metrics\Types\Result;
 
 /**
+ * The base of every metric. Extend a typed base — `Value`, `Trend`, `Progress` or
+ * `Partition` — and implement `calculate()`; read the typed result with `result()` or the
+ * JSON envelope with `toArray()`.
+ *
  * @phpstan-consistent-constructor
  *
  * @implements Arrayable<string, mixed>
  */
-abstract class Metrics implements Arrayable, Responsable
+abstract class Metric implements Arrayable, Responsable
 {
     use Cacheable;
     use Description;
@@ -94,6 +100,16 @@ abstract class Metrics implements Arrayable, Responsable
     abstract protected function calculate(): Result;
 
     /**
+     * The metric's typed result — calculated, or restored from the result cache. The
+     * typed bases narrow it: `Value` returns a `ValueResult`, `Trend` a `TrendResult`,
+     * `Progress` a `ProgressResult` and `Partition` a `PartitionResult`.
+     */
+    public function result(): Result
+    {
+        return $this->computeResult();
+    }
+
+    /**
      * @return array<string, mixed>
      */
     public function toArray(): array
@@ -111,13 +127,13 @@ abstract class Metrics implements Arrayable, Responsable
                     'end' => $this->customRangeEnd,
                 ],
             ],
-            'result' => $this->applyFormatting($this->resolveResultArray()),
+            'result' => $this->applyFormatting($this->result()->toArray()),
         ];
     }
 
     /**
      * Return the metric's envelope as a JSON response so a controller can
-     * `return Metric::get('x')` directly. Authorization stays the host app's
+     * `return Metrics::get('x')` directly. Authorization stays the host app's
      * responsibility.
      *
      * @param  Request  $request
@@ -128,30 +144,55 @@ abstract class Metrics implements Arrayable, Responsable
     }
 
     /**
-     * @return array<string, mixed>
+     * The result, narrowed to the type a typed base promises.
+     *
+     * @template TResult of Result
+     *
+     * @param  class-string<TResult>  $type
+     * @return TResult
+     *
+     * @throws UnexpectedResultException when `calculate()` returned another result type
      */
-    protected function resolveResultArray(): array
+    protected function resultOf(string $type): Result
+    {
+        $result = $this->computeResult();
+
+        if (! $result instanceof $type) {
+            throw UnexpectedResultException::for(static::class, $type, $result::class);
+        }
+
+        return $result;
+    }
+
+    protected function computeResult(): Result
     {
         $startedAt = hrtime(true);
 
         if (! $this->cachingEnabled()) {
-            $result = $this->calculate()->toArray();
+            $result = $this->calculate();
 
             $this->dispatchCalculated($startedAt, fromCache: false);
 
             return $result;
         }
 
+        $repository = $this->cacheRepository();
         $cacheKey = $this->resolveCacheKey();
-        $fromCache = $this->cacheRepository()->has($cacheKey);
+        $generation = ResultCache::generation(ResultCache::scopeFor($this));
 
-        $result = $this->cacheRepository()->remember(
-            $cacheKey,
-            $this->resolveCacheTtl(),
-            fn (): array => $this->calculate()->toArray(),
-        );
+        $cached = ResultCache::restore($repository->get($cacheKey), $generation);
 
-        $this->dispatchCalculated($startedAt, $fromCache);
+        if ($cached !== null) {
+            $this->dispatchCalculated($startedAt, fromCache: true);
+
+            return $cached;
+        }
+
+        $result = $this->calculate();
+
+        $repository->put($cacheKey, ResultCache::envelope($result, $generation), $this->resolveCacheTtl());
+
+        $this->dispatchCalculated($startedAt, fromCache: false);
 
         return $result;
     }

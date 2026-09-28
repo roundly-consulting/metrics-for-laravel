@@ -87,6 +87,14 @@ trait BuildsValueMetric
         return $this;
     }
 
+    /**
+     * @return array<array-key, mixed>
+     */
+    protected function cacheIdentity(): array
+    {
+        return [$this->aggregateFunction, $this->aggregateColumn, $this->aggregateDateColumn, $this->queryIdentity($this->query)];
+    }
+
     protected function calculate(): Result
     {
         if ($this->query === null) {

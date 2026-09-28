@@ -3,7 +3,7 @@
 declare(strict_types=1);
 
 use Illuminate\Support\Carbon;
-use RoundlyConsulting\Metrics\Facades\Metric;
+use RoundlyConsulting\Metrics\Facades\Metrics;
 use RoundlyConsulting\Metrics\Tests\Metrics\Value\Users;
 use RoundlyConsulting\Metrics\Tests\Models\User;
 
@@ -85,7 +85,7 @@ it('caches via a per-metric ttl and a custom key', function (): void {
 it('caches until a given datetime', function (): void {
     createUsersForMetricsTesting([['balance' => 1, 'created_at' => now()]]);
 
-    $metric = Metric::value()
+    $metric = Metrics::value()
         ->count(User::query())
         ->range('TODAY')
         ->cacheFor(now()->addHour());
@@ -95,6 +95,6 @@ it('caches until a given datetime', function (): void {
     createUsersForMetricsTesting([['balance' => 1, 'created_at' => now()]]);
 
     expect(
-        Metric::value()->count(User::query())->range('TODAY')->cacheFor(now()->addHour())->toArray()['result']['value']
+        Metrics::value()->count(User::query())->range('TODAY')->cacheFor(now()->addHour())->toArray()['result']['value']
     )->toBe(1.0);
 });

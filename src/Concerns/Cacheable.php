@@ -7,8 +7,10 @@ namespace RoundlyConsulting\Metrics\Concerns;
 use Carbon\CarbonImmutable;
 use DateTimeInterface;
 use Illuminate\Contracts\Cache\Repository;
-use Illuminate\Support\Facades\Cache;
+use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Database\Eloquent\Model;
 use RoundlyConsulting\Metrics\Exceptions\InvalidConfigurationException;
+use RoundlyConsulting\Metrics\Support\ResultCache;
 use RoundlyConsulting\PackageToolkit\Support\Config;
 
 trait Cacheable
@@ -96,25 +98,58 @@ trait Cacheable
 
     protected function cacheRepository(): Repository
     {
-        $store = config('metrics.cache.store');
-
-        return Cache::store(is_string($store) ? $store : null);
+        return ResultCache::repository();
     }
 
+    /**
+     * The custom key when one is set, else a key derived from everything that makes the
+     * result unique: the class, the registry key, the range and timezone, the ad-hoc
+     * builder's query ({@see cacheIdentity()}) and the type's options.
+     */
     protected function resolveCacheKey(): string
     {
         if ($this->customCacheKey !== null) {
             return $this->customCacheKey;
         }
 
-        $prefix = config('metrics.cache.prefix', 'metrics');
-
         $parts = array_merge(
-            [static::class, $this->range, $this->customRangeStart, $this->customRangeEnd, $this->timezoneOverride],
+            [static::class, $this->resolvedKey, $this->range, $this->customRangeStart, $this->customRangeEnd, $this->timezoneOverride],
+            ['identity' => $this->cacheIdentity()],
             $this->cacheDiscriminators(),
         );
 
-        return (is_string($prefix) ? $prefix : 'metrics').':'.md5(serialize($parts));
+        return ResultCache::prefix().':'.md5(serialize($parts));
+    }
+
+    /**
+     * What the metric computes, when its class alone does not say — an ad-hoc builder's
+     * query and aggregate. A metric class's `calculate()` is fixed by the class itself.
+     *
+     * @return array<array-key, mixed>
+     */
+    protected function cacheIdentity(): array
+    {
+        return [];
+    }
+
+    /**
+     * The identity of an Eloquent query: its connection, model, SQL and bindings.
+     *
+     * @param  Builder<covariant Model>|null  $query
+     * @return array<array-key, mixed>
+     */
+    protected function queryIdentity(?Builder $query): array
+    {
+        if ($query === null) {
+            return [];
+        }
+
+        return [
+            $query->getModel()->getConnectionName(),
+            $query->getModel()::class,
+            $query->toSql(),
+            $query->getBindings(),
+        ];
     }
 
     /**

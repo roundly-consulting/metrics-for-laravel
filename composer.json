@@ -107,7 +107,7 @@
                 "RoundlyConsulting\\Metrics\\MetricsServiceProvider"
             ],
             "aliases": {
-                "Metric": "RoundlyConsulting\\Metrics\\Facades\\Metric"
+                "Metrics": "RoundlyConsulting\\Metrics\\Facades\\Metrics"
             }
         }
     },

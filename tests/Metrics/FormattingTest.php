@@ -3,7 +3,7 @@
 declare(strict_types=1);
 
 use Illuminate\Support\Number;
-use RoundlyConsulting\Metrics\Facades\Metric;
+use RoundlyConsulting\Metrics\Facades\Metrics;
 use RoundlyConsulting\Metrics\Tests\Metrics\Trend\UsersBalance;
 use RoundlyConsulting\Metrics\Tests\Metrics\Value\Users;
 use RoundlyConsulting\Metrics\Tests\Models\User;
@@ -19,7 +19,7 @@ it('omits formatting by default', function (): void {
 it('formats a value via the Number helper', function (): void {
     createUsersForMetricsTesting([['balance' => 1500, 'created_at' => now()]]);
 
-    $metrics = Metric::value()
+    $metrics = Metrics::value()
         ->sum(User::query(), 'balance')
         ->formatUsing(fn (float $value): string => Number::currency($value, 'USD'))
         ->toArray();
@@ -51,7 +51,7 @@ it('formats each partition bucket', function (): void {
         ['balance' => 130, 'type' => 'admin'],
     ]);
 
-    $metrics = Metric::partition()
+    $metrics = Metrics::partition()
         ->sum(User::query(), 'type', 'balance')
         ->formatUsing(fn (float $value): string => number_format($value).' pts')
         ->toArray();

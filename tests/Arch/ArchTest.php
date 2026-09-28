@@ -2,7 +2,9 @@
 
 declare(strict_types=1);
 
+use RoundlyConsulting\Metrics\Facades\Metrics;
 use RoundlyConsulting\Metrics\MetricsManager;
+use RoundlyConsulting\Metrics\Types\Value\ValueResult;
 use RoundlyConsulting\Testing\Arch\ArchPresets;
 
 /**
@@ -28,21 +30,29 @@ use RoundlyConsulting\Testing\Arch\ArchPresets;
 ArchPresets::strictTypes('RoundlyConsulting\Metrics');
 
 /**
- * Exactly one exemption, and it is a seam the package itself consumes: `MetricsFake
- * extends MetricsManager`, so `final` here is a PHP fatal rather than a style question.
- * `Metric::fake()` is the documented entry point host apps call, and it returns that
- * subclass. Named explicitly so the decision is visible and rot-checked — `shops` finalled
- * its `ShopManager`, but nothing extends that one.
+ * Two exemptions, both seams the package itself consumes, so `final` on either is a PHP
+ * fatal rather than a style question:
+ *
+ *   - `MetricsFake extends MetricsManager`. `Metrics::fake()` is the documented entry point
+ *     host apps call, and it returns that subclass — which is also what an injected
+ *     manager receives under the fake.
+ *   - `ProgressResult extends ValueResult`. A progress result is a value result with a
+ *     target, and that subtype is what lets `Progress extends Value` narrow `result()`
+ *     from `ValueResult` to `ProgressResult`.
+ *
+ * Named explicitly so the decisions are visible and rot-checked — `shops` finalled its
+ * `ShopManager`, but nothing extends that one.
  *
  * The seven abstract bases this list used to name are gone, and their removal is the point
  * rather than tidying. `finalByDefault` skips abstract classes on its own (`abstract final`
  * is a fatal, so flagging one was a false positive by construction), so every one of them
- * silenced nothing it needed to — while `Metrics::class` silenced `MetricsManager` by
+ * silenced nothing it needed to — while the base class (then `Metrics::class`) silenced `MetricsManager` by
  * string prefix, which is precisely why this preset ran green over a non-final class for
  * the whole life of the package.
  */
 ArchPresets::finalByDefault('RoundlyConsulting\Metrics', [
     MetricsManager::class,
+    ValueResult::class,
 ]);
 
 /**
@@ -58,6 +68,12 @@ ArchPresets::noLocalCryptoPrimitives('RoundlyConsulting\Metrics');
  * legitimately lands in `require` that this must forgive. If it goes red the graph is
  * wrong — never widen the allow-list to quiet it.
  */
-ArchPresets::runtimeRequireIsWhitelisted(__DIR__.'/../composer.json');
+ArchPresets::runtimeRequireIsWhitelisted(__DIR__.'/../../composer.json');
 
 ArchPresets::noDebuggingLeftovers();
+
+/**
+ * Metrics has no actions, so this guards the shape rather than a live bypass: the metric-builder
+ * traits under Concerns/ and Traits/ must never grow a path around the manager.
+ */
+ArchPresets::modelsGoThroughTheFacade('RoundlyConsulting\Metrics');

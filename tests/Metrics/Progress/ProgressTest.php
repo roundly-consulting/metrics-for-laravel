@@ -19,6 +19,7 @@ it('returns progress metrics for total users', function () {
             'target' => 5.0,
             'avoid' => false,
             'change' => [
+                'percentage' => null,
                 'is_increase' => true,
                 'progress' => 40.0,
                 'value' => 2.0,
@@ -46,6 +47,7 @@ it('returns decreased progress metrics for users created today vs yesterday', fu
             'target' => 4.0,
             'avoid' => true,
             'change' => [
+                'percentage' => -67.0,
                 'is_increase' => false,
                 'progress' => -50.0,
                 'value' => -2.0,
@@ -72,6 +74,7 @@ it('returns increased progress metrics for users created today vs yesterday', fu
             'target' => 4.0,
             'avoid' => false,
             'change' => [
+                'percentage' => 100.0,
                 'is_increase' => true,
                 'progress' => 25.0,
                 'value' => 1.0,
@@ -96,6 +99,7 @@ it('returns 100% progress when no target is set and value is greater than 0', fu
             'target' => 0.0,
             'avoid' => false,
             'change' => [
+                'percentage' => null,
                 'is_increase' => true,
                 'progress' => 100.0,
                 'value' => 1.0,
@@ -116,6 +120,7 @@ it('returns 0% progress when no target is set and value is 0', function () {
             'target' => 0.0,
             'avoid' => false,
             'change' => [
+                'percentage' => null,
                 'is_increase' => false,
                 'progress' => 0.0,
                 'value' => 0.0,

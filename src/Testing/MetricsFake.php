@@ -6,15 +6,17 @@ namespace RoundlyConsulting\Metrics\Testing;
 
 use Illuminate\Contracts\Container\Container;
 use PHPUnit\Framework\Assert;
-use RoundlyConsulting\Metrics\Metrics;
+use RoundlyConsulting\Metrics\Exceptions\UnknownMetricException;
+use RoundlyConsulting\Metrics\Facades\Metrics;
+use RoundlyConsulting\Metrics\Metric;
 use RoundlyConsulting\Metrics\MetricsManager;
 use RoundlyConsulting\Metrics\Types\Fake\FakeMetric;
 
 /**
- * A recording variant of {@see MetricsManager} for host-app tests. Registered
- * keys can be swapped for canned results, and every resolution is recorded so
- * assertions can verify it — matching Laravel's `*::fake()` ergonomics
- * (see {@see MetricsManager::fake()}).
+ * A recording {@see MetricsManager} for host-app tests, installed by
+ * {@see Metrics::fake()}. It keeps every metric the real manager had registered, answers
+ * the canned keys with canned results, records every resolution, and records cache
+ * invalidation (`forget()`, `flushCache()`) without touching the cache.
  *
  * It lives in src/ so host apps can use it; it depends only on PHPUnit's
  * Assert, which is always present in a Laravel app's dev dependencies.
@@ -24,22 +26,32 @@ final class MetricsFake extends MetricsManager
     /** @var array<string, int> */
     private array $resolved = [];
 
-    /** @var array<string, Metrics> */
+    /** @var array<string, Metric> */
     private array $canned = [];
 
+    /** @var list<string> */
+    private array $forgotten = [];
+
+    private int $flushes = 0;
+
     /**
-     * @param  array<string, mixed>  $results
+     * @param  array<string, mixed>  $results  canned results keyed by metric key
+     * @param  MetricsManager|null  $registry  the manager whose registrations the fake keeps
      */
-    public function __construct(Container $container, array $results = [])
+    public function __construct(Container $container, array $results = [], ?MetricsManager $registry = null)
     {
         parent::__construct($container);
+
+        if ($registry !== null) {
+            $this->metrics = $registry->metrics;
+        }
 
         foreach ($results as $key => $value) {
             $this->canned[$key] = FakeMetric::fromCanned($value);
         }
     }
 
-    public function get(string $key): Metrics
+    public function get(string $key): Metric
     {
         $this->resolved[$key] = ($this->resolved[$key] ?? 0) + 1;
 
@@ -53,6 +65,47 @@ final class MetricsFake extends MetricsManager
     public function has(string $key): bool
     {
         return array_key_exists($key, $this->canned) || parent::has($key);
+    }
+
+    /**
+     * @return list<string>
+     */
+    public function keys(): array
+    {
+        return array_values(array_unique([...parent::keys(), ...array_keys($this->canned)]));
+    }
+
+    /**
+     * @return array<string, Metric>
+     */
+    public function all(): array
+    {
+        $resolved = [];
+
+        foreach ($this->keys() as $key) {
+            $resolved[$key] = $this->get($key);
+        }
+
+        return $resolved;
+    }
+
+    public function unregister(string $key): self
+    {
+        unset($this->canned[$key]);
+
+        parent::unregister($key);
+
+        return $this;
+    }
+
+    public function forget(string|Metric $metric): void
+    {
+        $this->forgotten[] = is_string($metric) ? $this->cannedOrRegistered($metric) : ($metric->key() ?? $metric::class);
+    }
+
+    public function flushCache(): void
+    {
+        $this->flushes++;
     }
 
     public function assertResolved(string $key, ?int $times = null): void
@@ -87,5 +140,46 @@ final class MetricsFake extends MetricsManager
     public function assertNothingResolved(): void
     {
         Assert::assertSame([], $this->resolved, 'Expected no metrics to be resolved, but some were.');
+    }
+
+    /**
+     * Assert a metric's cached results were forgotten — by registry key, or by class for
+     * an unregistered metric.
+     */
+    public function assertForgotten(string $key): void
+    {
+        Assert::assertContains($key, $this->forgotten, "Expected the cached results of metric [{$key}] to be forgotten, but they were not.");
+    }
+
+    public function assertNotForgotten(string $key): void
+    {
+        Assert::assertNotContains($key, $this->forgotten, "Expected the cached results of metric [{$key}] not to be forgotten, but they were.");
+    }
+
+    public function assertNothingForgotten(): void
+    {
+        Assert::assertSame([], $this->forgotten, 'Expected no cached metric results to be forgotten, but some were.');
+    }
+
+    public function assertCacheFlushed(): void
+    {
+        Assert::assertGreaterThan(0, $this->flushes, 'Expected the metric result cache to be flushed, but it was not.');
+    }
+
+    public function assertCacheNotFlushed(): void
+    {
+        Assert::assertSame(0, $this->flushes, 'Expected the metric result cache not to be flushed, but it was.');
+    }
+
+    /**
+     * @throws UnknownMetricException
+     */
+    private function cannedOrRegistered(string $key): string
+    {
+        if (! $this->has($key)) {
+            throw UnknownMetricException::forKey($key);
+        }
+
+        return $key;
     }
 }

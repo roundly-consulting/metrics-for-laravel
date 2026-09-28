@@ -4,22 +4,43 @@ declare(strict_types=1);
 
 namespace RoundlyConsulting\Metrics\Types\Progress;
 
-use RoundlyConsulting\Metrics\Types\Result;
+use RoundlyConsulting\Metrics\Support\Cast;
+use RoundlyConsulting\Metrics\Types\Value\ValueResult;
 
-final class ProgressResult implements Result
+/**
+ * A value measured against a target. It is a {@see ValueResult}, so `value()`,
+ * `previous()`, `change()` and `isIncrease()` read the same as on a value metric.
+ */
+final class ProgressResult extends ValueResult
 {
     public function __construct(
-        protected float $value,
+        float $value,
         protected float $target,
         protected float $progress,
         protected bool $avoid,
-        protected ?float $previous = null,
+        ?float $previous = null,
         protected ?float $previousProgress = null,
-    ) {}
+        ?float $change = null,
+    ) {
+        parent::__construct($value, $previous, $change);
+    }
 
-    public function value(): float
+    /**
+     * @param  array<string, mixed>  $data
+     */
+    public static function fromArray(array $data): self
     {
-        return $this->value;
+        $change = is_array($data['change'] ?? null) ? $data['change'] : [];
+
+        return new self(
+            value: Cast::float($data['value'] ?? null),
+            target: Cast::float($data['target'] ?? null),
+            progress: Cast::float($data['progress'] ?? null),
+            avoid: ($data['avoid'] ?? false) === true,
+            previous: Cast::nullableFloat($data['previous'] ?? null),
+            previousProgress: Cast::nullableFloat($data['previous_progress'] ?? null),
+            change: Cast::nullableFloat($change['percentage'] ?? null),
+        );
     }
 
     public function target(): float
@@ -32,14 +53,17 @@ final class ProgressResult implements Result
         return $this->progress;
     }
 
-    public function previous(): ?float
+    public function previousProgress(): ?float
     {
-        return $this->previous;
+        return $this->previousProgress;
     }
 
-    public function isIncrease(): bool
+    /**
+     * Whether the target is a ceiling to stay under rather than a goal to reach.
+     */
+    public function avoid(): bool
     {
-        return $this->value > $this->previous;
+        return $this->avoid;
     }
 
     /**
@@ -55,6 +79,7 @@ final class ProgressResult implements Result
             'target' => $this->target,
             'avoid' => $this->avoid,
             'change' => [
+                'percentage' => $this->change,
                 'is_increase' => $this->value > $this->previous,
                 'progress' => $this->progress - $this->previousProgress,
                 'value' => $this->value - $this->previous,

@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace RoundlyConsulting\Metrics\Types\Fake;
 
-use RoundlyConsulting\Metrics\Metrics;
+use RoundlyConsulting\Metrics\Metric;
 use RoundlyConsulting\Metrics\Testing\MetricsFake;
 use RoundlyConsulting\Metrics\Types\Result;
 use RoundlyConsulting\Metrics\Types\Value\ValueResult;
@@ -12,8 +12,10 @@ use RoundlyConsulting\Metrics\Types\Value\ValueResult;
 /**
  * A metric that returns a canned result, used by {@see MetricsFake}
  * to stand in for a real metric in host-application tests.
+ *
+ * @internal
  */
-final class FakeMetric extends Metrics
+final class FakeMetric extends Metric
 {
     private readonly Result $result;
 
@@ -22,15 +24,19 @@ final class FakeMetric extends Metrics
         $this->result = $result ?? new FakeResult([]);
 
         parent::__construct();
+
+        // A canned result is never cached: a persistent store would hand one test's
+        // canned value to the next test that fakes the same key differently.
+        $this->dontCache();
     }
 
     /**
-     * Build a fake metric from a canned value: a Metrics or Result is used as-is,
+     * Build a fake metric from a canned value: a Metric or Result is used as-is,
      * a number becomes a ValueResult, and an array becomes the raw result envelope.
      */
-    public static function fromCanned(mixed $value): Metrics
+    public static function fromCanned(mixed $value): Metric
     {
-        if ($value instanceof Metrics) {
+        if ($value instanceof Metric) {
             return $value;
         }
 
