@@ -20,7 +20,8 @@ final class YearToDate extends BaseRange
     public function end(): CarbonImmutable
     {
         if ($this->previous) {
-            return $this->now()->subYear();
+            // Clamped: on a leap day the same point last year is 02-28, not 03-01.
+            return $this->now()->subYearWithoutOverflow();
         }
 
         return $this->now();

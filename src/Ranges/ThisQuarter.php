@@ -6,23 +6,26 @@ namespace RoundlyConsulting\Metrics\Ranges;
 
 use Carbon\CarbonImmutable;
 
+/**
+ * Its previous period is stepped back from the start of the quarter, never from today: a
+ * month-end day overflows `subQuarter()` into the current quarter.
+ */
 final class ThisQuarter extends BaseRange
 {
     public function start(): CarbonImmutable
     {
-        if ($this->previous) {
-            return $this->now()->subQuarter()->startOfQuarter();
-        }
-
-        return $this->now()->startOfQuarter();
+        return $this->quarter()->startOfQuarter();
     }
 
     public function end(): CarbonImmutable
     {
-        if ($this->previous) {
-            return $this->now()->subQuarter()->endOfQuarter();
-        }
+        return $this->quarter()->endOfQuarter();
+    }
 
-        return $this->now()->endOfQuarter();
+    private function quarter(): CarbonImmutable
+    {
+        $quarter = $this->now()->startOfQuarter();
+
+        return $this->previous ? $quarter->subQuarter() : $quarter;
     }
 }
