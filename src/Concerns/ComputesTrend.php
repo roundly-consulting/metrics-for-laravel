@@ -168,19 +168,29 @@ trait ComputesTrend
 
         $dates = [];
 
-        $period = $range->start()->toPeriod($range->end(), 1, $this->unit->value);
+        // Step from the start of the bucket that holds the range start, not the start
+        // itself: a raw start (a Thursday, the 30th) steps past the bucket holding the end
+        // — or, a month at a time, straight over a shorter month — and drops it.
+        $period = $this->unit->startOfBucket($range->start())->toPeriod($range->end(), 1, $this->unit->value);
 
         foreach ($period as $stepInPeriod) {
-            $stepInUnitFormat = $this->formatDatetimeToUnit($stepInPeriod);
-
-            $dates[$stepInUnitFormat] = round(
-                num: (float) $aggregateResults->get($stepInUnitFormat, 0),
-                precision: $this->roundingPrecision,
-                mode: $this->roundingMode,
-            );
+            $dates[$this->formatDatetimeToUnit($stepInPeriod)] = 0.0;
         }
 
-        return collect($dates);
+        // Every bucket the database returned is kept, even one the axis did not generate
+        // (a custom driver whose keys disagree with Unit::format()): a visible stray key
+        // beats real rows silently reported as 0.
+        foreach ($aggregateResults as $key => $value) {
+            $dates[(string) $key] = (float) $value;
+        }
+
+        ksort($dates, SORT_STRING);
+
+        return collect($dates)->map(fn (float $value): float => round(
+            num: $value,
+            precision: $this->roundingPrecision,
+            mode: $this->roundingMode,
+        ));
     }
 
     /**

@@ -61,27 +61,56 @@ enum Unit: string
     }
 
     /**
-     * Parse a bucket key back into a datetime, optionally at the end of the bucket.
+     * The first instant of the bucket holding `$datetime`, in its own timezone. Weeks are
+     * ISO weeks and start on Monday whatever the locale, to agree with the `o-W` key.
+     */
+    public function startOfBucket(CarbonInterface $datetime): CarbonInterface
+    {
+        return match ($this) {
+            self::Minute => $datetime->startOfMinute(),
+            self::Hour => $datetime->startOfHour(),
+            self::Day => $datetime->startOfDay(),
+            self::Week => $datetime->startOfWeek(CarbonInterface::MONDAY),
+            self::Month => $datetime->startOfMonth(),
+            self::Year => $datetime->startOfYear(),
+        };
+    }
+
+    /**
+     * Parse a bucket key back into a datetime — the start of the bucket, or its last
+     * second when `$end` is set.
+     *
+     * Every format starts with `!`: without it `createFromFormat()` fills the fields the
+     * key leaves out from "now", so on the 29th-31st `2026-02` parsed to March. Weeks end
+     * on Sunday whatever the locale, to agree with the ISO `o-W` key.
      */
     public function parse(string $datetime, bool $end = false): CarbonInterface
     {
-        return match ($this) {
-            self::Minute => Carbon::createFromFormat('Y-m-d H:i:00', $datetime)
-                ->when($end, fn (Carbon $datetime) => $datetime->endOfMinute()),
-            self::Hour => Carbon::createFromFormat('Y-m-d H:00', $datetime)
-                ->when($end, fn (Carbon $datetime) => $datetime->endOfHour()),
-            self::Day => Carbon::createFromFormat('Y-m-d', $datetime)
-                ->when($end, fn (Carbon $datetime) => $datetime->endOfDay()),
+        $start = match ($this) {
+            self::Minute => Carbon::createFromFormat('!Y-m-d H:i:00', $datetime),
+            self::Hour => Carbon::createFromFormat('!Y-m-d H:00', $datetime),
+            self::Day => Carbon::createFromFormat('!Y-m-d', $datetime),
             self::Week => Carbon::now()
                 ->setISODate(
                     (int) str($datetime)->before('-')->toString(),
                     (int) str($datetime)->after('-')->toString(),
                 )
-                ->when($end, fn (Carbon $datetime) => $datetime->endOfWeek()),
-            self::Month => Carbon::createFromFormat('Y-m', $datetime)
-                ->when($end, fn (Carbon $datetime) => $datetime->endOfMonth()),
-            self::Year => Carbon::createFromFormat('Y', $datetime)
-                ->when($end, fn (Carbon $datetime) => $datetime->endOfYear()),
+                ->startOfDay(),
+            self::Month => Carbon::createFromFormat('!Y-m', $datetime),
+            self::Year => Carbon::createFromFormat('!Y', $datetime),
+        };
+
+        if (! $end) {
+            return $start;
+        }
+
+        return match ($this) {
+            self::Minute => $start->endOfMinute(),
+            self::Hour => $start->endOfHour(),
+            self::Day => $start->endOfDay(),
+            self::Week => $start->endOfWeek(CarbonInterface::SUNDAY),
+            self::Month => $start->endOfMonth(),
+            self::Year => $start->endOfYear(),
         };
     }
 }

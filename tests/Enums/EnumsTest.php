@@ -2,11 +2,14 @@
 
 declare(strict_types=1);
 
+use Carbon\CarbonImmutable;
+use Illuminate\Support\Carbon;
 use RoundlyConsulting\Enums\DataTransferObjects\EnumOption;
 use RoundlyConsulting\Enums\Exceptions\EnumException;
 use RoundlyConsulting\Metrics\Enums\Period;
 use RoundlyConsulting\Metrics\Enums\Unit;
 use RoundlyConsulting\Metrics\Exceptions\InvalidRangeException;
+use RoundlyConsulting\Metrics\Tests\Metrics\Trend\Users as UsersTrend;
 use RoundlyConsulting\Metrics\Tests\Metrics\Trend\UsersBalance;
 use RoundlyConsulting\Metrics\Tests\Metrics\Value\Users;
 use RoundlyConsulting\Metrics\Traits\Ranges;
@@ -215,4 +218,40 @@ it('resolves a custom range through the period enum', function (): void {
 
     expect($range->start()->toDateString())->toBe('2023-03-01')
         ->and($range->end()->toDateString())->toBe('2023-03-05');
+});
+
+/**
+ * `createFromFormat()` without `!` fills every field the format leaves out from "now" —
+ * the day of month for `Y-m`, the month and day for `Y`, the time for `Y-m-d`. On the 29th
+ * to 31st, `2026-02` became March 3rd; an all-time monthly trend then started its axis in
+ * March and lost February.
+ */
+it('parses every bucket key to the start of its bucket, whatever the day today', function (Unit $unit, string $key, string $start): void {
+    CarbonImmutable::setTestNow('2026-03-31 17:45:12');
+    Carbon::setTestNow('2026-03-31 17:45:12');
+
+    expect($unit->parse($key)->toDateTimeString())->toBe($start);
+})->with([
+    'minute' => [Unit::Minute, '2026-02-03 10:11:00', '2026-02-03 10:11:00'],
+    'hour' => [Unit::Hour, '2026-02-03 10:00', '2026-02-03 10:00:00'],
+    'day' => [Unit::Day, '2026-02-03', '2026-02-03 00:00:00'],
+    'week' => [Unit::Week, '2026-06', '2026-02-02 00:00:00'],
+    'month' => [Unit::Month, '2026-02', '2026-02-01 00:00:00'],
+    'year' => [Unit::Year, '2025', '2025-01-01 00:00:00'],
+]);
+
+it('keeps every month of an all-time monthly trend on the 31st', function (): void {
+    Carbon::setTestNow('2026-03-31 12:00:00');
+
+    createUsersForMetricsTesting([
+        ['balance' => 1, 'created_at' => '2026-01-15 09:00:00'],
+        ['balance' => 1, 'created_at' => '2026-02-15 09:00:00'],
+        ['balance' => 1, 'created_at' => '2026-03-15 09:00:00'],
+    ]);
+
+    expect(UsersTrend::make()->monthly()->range('ALL')->result()->trends())->toBe([
+        '2026-01' => 1.0,
+        '2026-02' => 1.0,
+        '2026-03' => 1.0,
+    ]);
 });
