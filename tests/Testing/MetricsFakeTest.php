@@ -211,3 +211,26 @@ it('fails assertNothingResolved when a metric was resolved', function (): void {
 it('rebuilds a fake result from its array form', function (): void {
     expect(FakeResult::fromArray(['value' => 3])->toArray())->toBe(['value' => 3]);
 });
+
+it('hands out a fresh copy of a canned metric on every get', function (): void {
+    Metrics::fake(['a' => 1]);
+
+    Metrics::get('a')->range('TODAY');
+
+    expect(Metrics::get('a')->toArray()['range']['current'])->toBe('ALL')
+        ->and(Metrics::get('a'))->not->toBe(Metrics::get('a'));
+});
+
+it('never caches a canned metric instance either', function (): void {
+    config()->set('metrics.cache.enabled', true);
+
+    Metrics::fake(['users' => Users::make()]);
+
+    createUsersForMetricsTesting([['balance' => 1]]);
+    $first = Metrics::get('users')->result()->value();
+
+    createUsersForMetricsTesting([['balance' => 1]]);
+
+    expect($first)->toBe(1.0)
+        ->and(Metrics::get('users')->result()->value())->toBe(2.0);
+});

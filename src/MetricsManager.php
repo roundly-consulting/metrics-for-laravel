@@ -55,6 +55,10 @@ class MetricsManager
     }
 
     /**
+     * Resolve a registered metric, tagged with its key. Every call returns a new metric —
+     * a registered instance is copied — so configuring the result never changes what the
+     * next call returns.
+     *
      * @throws UnknownMetricException
      */
     public function get(string $key): Metric
@@ -166,8 +170,10 @@ class MetricsManager
      */
     private function resolve(string|Metric|Closure $metric): Metric
     {
+        // A registered instance is a template: hand out a copy, so a range() or timezone()
+        // one caller applies never reaches the next get() — under Octane, the next request.
         if ($metric instanceof Metric) {
-            return $metric;
+            return clone $metric;
         }
 
         if ($metric instanceof Closure) {

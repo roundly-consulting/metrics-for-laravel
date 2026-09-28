@@ -31,13 +31,14 @@ final class FakeMetric extends Metric
     }
 
     /**
-     * Build a fake metric from a canned value: a Metric or Result is used as-is,
-     * a number becomes a ValueResult, and an array becomes the raw result envelope.
+     * Build a fake metric from a canned value: a Metric is used as a copy with caching
+     * off, a Result as-is, a number becomes a ValueResult, and an array becomes the raw
+     * result envelope. Nothing canned is ever cached.
      */
     public static function fromCanned(mixed $value): Metric
     {
         if ($value instanceof Metric) {
-            return $value;
+            return (clone $value)->dontCache();
         }
 
         if ($value instanceof Result) {

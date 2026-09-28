@@ -56,7 +56,7 @@ final class MetricsFake extends MetricsManager
         $this->resolved[$key] = ($this->resolved[$key] ?? 0) + 1;
 
         if (array_key_exists($key, $this->canned)) {
-            return $this->canned[$key]->withKey($key);
+            return (clone $this->canned[$key])->withKey($key);
         }
 
         return parent::get($key);

@@ -32,7 +32,7 @@ it('resolves a registered instance and closure', function (): void {
     Metrics::register('instance', $instance);
     Metrics::register('closure', fn () => Users::make());
 
-    expect(Metrics::get('instance'))->toBe($instance)
+    expect(Metrics::get('instance'))->toBeInstanceOf(Users::class)->not->toBe($instance)
         ->and(Metrics::get('closure'))->toBeInstanceOf(Users::class);
 });
 
@@ -58,4 +58,32 @@ it('exposes ad-hoc builders from the facade', function (): void {
         ->and(Metrics::trend())->toBeInstanceOf(PendingTrend::class)
         ->and(Metrics::progress())->toBeInstanceOf(PendingProgress::class)
         ->and(Metrics::partition())->toBeInstanceOf(PendingPartition::class);
+});
+
+/**
+ * A registered instance is a template, not shared state: the manager is a singleton, and
+ * under Octane it outlives the request, so a `range()` or `timezone()` one caller applied
+ * to the instance itself used to reach every later `get()` — another request's `?period=`.
+ */
+it('hands out a fresh copy of a registered instance on every get', function (): void {
+    $instance = Users::make();
+    Metrics::register('reg', $instance);
+
+    Metrics::get('reg')->range('TODAY')->timezone('Asia/Tokyo');
+
+    $next = Metrics::get('reg')->toArray();
+
+    expect($next['range']['current'])->toBe('ALL')
+        ->and((fn () => $this->timezoneOverride)->call(Metrics::get('reg')))->toBeNull()
+        ->and($instance->toArray()['range']['current'])->toBe('ALL')
+        ->and(Metrics::get('reg'))->not->toBe(Metrics::get('reg'));
+});
+
+it('does not leave a dashboard range or timezone on a registered instance', function (): void {
+    Metrics::register('reg', Users::make());
+
+    Metrics::dashboard(['reg'])->range('TODAY')->timezone('Asia/Tokyo')->toArray();
+
+    expect(Metrics::get('reg')->toArray()['range']['current'])->toBe('ALL')
+        ->and((fn () => $this->timezoneOverride)->call(Metrics::get('reg')))->toBeNull();
 });
