@@ -164,9 +164,7 @@ trait AggregatesValues
         string $dateColumn
     ): float {
         return $this->getResult(
-            query: (clone $query)->whereBetween(
-                $dateColumn, [$range->start(), $range->end()]
-            ),
+            query: (clone $query)->whereBetween($dateColumn, $this->storageBounds($range)),
             function: $function,
             column: $column,
         );

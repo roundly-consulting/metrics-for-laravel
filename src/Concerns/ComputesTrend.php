@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace RoundlyConsulting\Metrics\Concerns;
 
+use Carbon\CarbonImmutable;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Query\Builder as QueryBuilder;
@@ -13,6 +14,7 @@ use RoundlyConsulting\Metrics\Exceptions\MissingTrendQueryExpressionException;
 use RoundlyConsulting\Metrics\Ranges\Custom;
 use RoundlyConsulting\Metrics\Ranges\Range;
 use RoundlyConsulting\Metrics\Support\RawExpression;
+use RoundlyConsulting\Metrics\Support\Timezones;
 use RoundlyConsulting\Metrics\Traits\Unit;
 use RoundlyConsulting\Metrics\Types\Trend\QueryExpressions\QueryExpression;
 use RoundlyConsulting\Metrics\Types\Trend\TrendResult;
@@ -108,10 +110,10 @@ trait ComputesTrend
                 return new TrendResult;
             }
 
-            $range = new Custom(
+            $range = (new Custom(
                 start: $this->fromUnitFormatToDatetime((string) $aggregateResults->keys()->first())->toDateTimeString(),
                 end: $this->fromUnitFormatToDatetime((string) $aggregateResults->keys()->last(), true)->toDateTimeString(),
-            );
+            ))->usingTimezone($this->timezoneOverride);
         } else {
             $range = $this->getRange();
         }
@@ -132,21 +134,16 @@ trait ComputesTrend
         $column = $grammar->wrap($column);
         $dateColumn = $dateColumn ?? $query->getModel()->getQualifiedCreatedAtColumn();
 
-        $expression = $this->resolveQueryExpression($query)->toSql($this->unit->value, $dateColumn);
+        $expression = $this->bucketExpression($query, $dateColumn);
 
-        // Resolve to the base query builder with global scopes applied so the raw
-        // aggregate/grouping SQL runs against the same constraints (e.g. soft deletes).
-        return $query->applyScopes()->getQuery()
+        return $this->scopedBase($query)
             ->select([
                 new RawExpression("{$function}({$column}) as aggregate"),
                 new RawExpression("{$expression} as aggregate_date"),
             ])
             ->when($this->range !== 'ALL', fn (QueryBuilder $query) => $query->whereBetween(
                 column: $dateColumn,
-                values: [
-                    $this->getRange()->start(),
-                    $this->getRange()->end(),
-                ],
+                values: $this->storageBounds($this->getRange()),
             ))
             ->groupBy(new RawExpression($expression))
             ->orderBy('aggregate_date')
@@ -235,10 +232,10 @@ trait ComputesTrend
 
         $dates = $rows->map(fn (array $row): string => (string) $row['aggregate_date'])->sort()->values();
 
-        return new Custom(
+        return (new Custom(
             start: $this->fromUnitFormatToDatetime((string) $dates->first())->toDateTimeString(),
             end: $this->fromUnitFormatToDatetime((string) $dates->last(), true)->toDateTimeString(),
-        );
+        ))->usingTimezone($this->timezoneOverride);
     }
 
     /**
@@ -271,9 +268,9 @@ trait ComputesTrend
         $column = $grammar->wrap($column);
         $series = $grammar->wrap($series);
 
-        $expression = $this->resolveQueryExpression($query)->toSql($this->unit->value, $dateColumn);
+        $expression = $this->bucketExpression($query, $dateColumn);
 
-        return $query->applyScopes()->getQuery()
+        return $this->scopedBase($query)
             ->select([
                 new RawExpression("{$function}({$column}) as aggregate"),
                 new RawExpression("{$expression} as aggregate_date"),
@@ -281,15 +278,95 @@ trait ComputesTrend
             ])
             ->when($this->range !== 'ALL', fn (QueryBuilder $query) => $query->whereBetween(
                 column: $dateColumn,
-                values: [
-                    $this->getRange()->start(),
-                    $this->getRange()->end(),
-                ],
+                values: $this->storageBounds($this->getRange()),
             ))
             ->groupBy(new RawExpression($expression), new RawExpression($series))
             ->orderBy('aggregate_date')
             ->get()
             ->map(fn (stdClass $row): array => (array) $row);
+    }
+
+    /**
+     * The SQL bucket key of `$dateColumn`, on the reporting clock.
+     *
+     * @param  Builder<covariant Model>  $query
+     */
+    protected function bucketExpression(Builder $query, string $dateColumn): string
+    {
+        $grammar = $this->resolveQueryExpression($query);
+
+        return $grammar->toSql($this->unit->value, $this->reportingDateColumn($grammar, $query, $dateColumn));
+    }
+
+    /**
+     * The date column re-read on the reporting clock — unchanged when it is the storage
+     * clock. The shift is computed over the span the query can return: the range's bounds,
+     * or for `ALL` the stored column's own first and last value.
+     *
+     * @param  Builder<covariant Model>  $query
+     */
+    protected function reportingDateColumn(QueryExpression $grammar, Builder $query, string $dateColumn): string
+    {
+        $storage = Timezones::storage();
+        $reporting = $this->reportingTimezone();
+
+        if ($storage === $reporting) {
+            return $dateColumn;
+        }
+
+        $span = $this->range === 'ALL'
+            ? $this->storedSpan($query, $dateColumn)
+            : $this->storageBounds($this->getRange());
+
+        if ($span === null) {
+            return $dateColumn;
+        }
+
+        return Timezones::reportingColumn($grammar, $dateColumn, $storage, $reporting, $span[0], $span[1]);
+    }
+
+    /**
+     * The first and last stored value of the date column, or null when the query has no
+     * rows.
+     *
+     * @param  Builder<covariant Model>  $query
+     * @return list<CarbonImmutable>|null
+     */
+    protected function storedSpan(Builder $query, string $dateColumn): ?array
+    {
+        $wrapped = $query->getQuery()->getGrammar()->wrap($dateColumn);
+
+        $row = $this->scopedBase($query)
+            ->reorder()
+            ->select([
+                new RawExpression("min({$wrapped}) as span_start"),
+                new RawExpression("max({$wrapped}) as span_end"),
+            ])
+            ->first();
+
+        if (! $row instanceof stdClass || ! is_string($row->span_start ?? null) || ! is_string($row->span_end ?? null)) {
+            return null;
+        }
+
+        $storage = Timezones::storage();
+
+        return [CarbonImmutable::parse($row->span_start, $storage), CarbonImmutable::parse($row->span_end, $storage)];
+    }
+
+    /**
+     * A copy of the base query with the model's global scopes applied (e.g. soft deletes),
+     * so the raw aggregate/grouping SQL runs against the same constraints.
+     *
+     * Cloned first: `applyScopes()` hands back the builder itself when the model has no
+     * global scopes, so the select/where/group added here would otherwise pile onto the
+     * metric's own query — a second calculation of the same metric (another range, a
+     * re-resolved registered instance) then ran with the first one's window still on it.
+     *
+     * @param  Builder<covariant Model>  $query
+     */
+    protected function scopedBase(Builder $query): QueryBuilder
+    {
+        return (clone $query)->applyScopes()->getQuery();
     }
 
     /**

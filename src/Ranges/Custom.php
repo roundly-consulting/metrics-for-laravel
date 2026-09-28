@@ -6,6 +6,9 @@ namespace RoundlyConsulting\Metrics\Ranges;
 
 use Carbon\CarbonImmutable;
 
+/**
+ * An explicit window. The bounds are wall-clock strings read on the reporting clock.
+ */
 final class Custom extends BaseRange
 {
     public function __construct(protected ?string $start, protected ?string $end) {}
@@ -13,30 +16,35 @@ final class Custom extends BaseRange
     public function start(): CarbonImmutable
     {
         if ($this->previous) {
-            return CarbonImmutable::parse($this->start)->subDays(
+            return $this->parse($this->start)->subDays(
                 $this->daysBetween(),
             );
         }
 
-        return CarbonImmutable::parse($this->start);
+        return $this->parse($this->start);
     }
 
     public function end(): CarbonImmutable
     {
         if ($this->previous) {
-            return CarbonImmutable::parse($this->end)->subDays(
+            return $this->parse($this->end)->subDays(
                 $this->daysBetween(),
             );
         }
 
-        return CarbonImmutable::parse($this->end);
+        return $this->parse($this->end);
     }
 
     protected function daysBetween(): int
     {
-        $start = CarbonImmutable::parse($this->start);
-        $end = CarbonImmutable::parse($this->end);
+        $start = $this->parse($this->start);
+        $end = $this->parse($this->end);
 
         return (int) $start->diffInDays($end);
+    }
+
+    private function parse(?string $datetime): CarbonImmutable
+    {
+        return CarbonImmutable::parse($datetime, $this->timezoneName());
     }
 }

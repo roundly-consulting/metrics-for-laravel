@@ -13,4 +13,9 @@ final class MarkerQueryExpression implements QueryExpression
     {
         throw new RuntimeException('marker driver used');
     }
+
+    public function addMinutes(string $column, int $minutes): string
+    {
+        throw new RuntimeException('marker driver used');
+    }
 }

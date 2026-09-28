@@ -5,7 +5,13 @@ declare(strict_types=1);
 namespace RoundlyConsulting\Metrics\Ranges;
 
 use Carbon\CarbonImmutable;
+use RoundlyConsulting\Metrics\Support\Timezones;
 
+/**
+ * A range resolved on the reporting clock: the per-metric timezone override, else
+ * `metrics.timezone`, else the application timezone. The query converts its bounds to the
+ * storage clock before binding them.
+ */
 abstract class BaseRange implements Range
 {
     protected bool $previous = false;
@@ -32,13 +38,18 @@ abstract class BaseRange implements Range
     }
 
     /**
-     * The current moment in the per-metric timezone override, falling back to
-     * the configured reporting timezone and finally the application timezone.
+     * The zone this range is resolved in.
+     */
+    protected function timezoneName(): string
+    {
+        return Timezones::reporting($this->timezone);
+    }
+
+    /**
+     * The current moment on the reporting clock.
      */
     protected function now(): CarbonImmutable
     {
-        $timezone = $this->timezone ?? config('metrics.timezone');
-
-        return CarbonImmutable::now(is_string($timezone) ? $timezone : null);
+        return CarbonImmutable::now($this->timezoneName());
     }
 }

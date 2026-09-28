@@ -158,9 +158,11 @@ trait ComputesPartition
         $groupBy = $grammar->wrap($groupBy);
         $valueColumn = $valueColumn ? $grammar->wrap($valueColumn) : $groupBy;
 
-        // Resolve to the base query builder with global scopes applied so the raw
-        // aggregate/grouping SQL runs against the same constraints (e.g. soft deletes).
-        $results = $query->applyScopes()->getQuery()
+        // A copy of the base query with global scopes applied (e.g. soft deletes), so the raw
+        // aggregate/grouping SQL runs against the same constraints. Cloned first:
+        // applyScopes() returns the builder itself when there are no global scopes, and the
+        // SQL below would otherwise pile onto the metric's own query on every calculation.
+        $results = (clone $query)->applyScopes()->getQuery()
             ->select([
                 new RawExpression("{$groupBy} as aggregate_partition"),
                 new RawExpression("{$function}({$valueColumn}) as aggregate"),
@@ -169,8 +171,7 @@ trait ComputesPartition
             ->orderByDesc('aggregate');
 
         if ($this->range !== 'ALL') {
-            $range = $this->getRange();
-            $results = $results->whereBetween($dateColumn, [$range->start(), $range->end()]);
+            $results = $results->whereBetween($dateColumn, $this->storageBounds($this->getRange()));
         }
 
         return $results

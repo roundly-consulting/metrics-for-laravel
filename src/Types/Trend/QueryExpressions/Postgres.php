@@ -22,4 +22,9 @@ final class Postgres implements QueryExpression
 
         return "to_char({$column}, '{$format}')";
     }
+
+    public function addMinutes(string $column, int $minutes): string
+    {
+        return "({$column} + interval '{$minutes} minutes')";
+    }
 }

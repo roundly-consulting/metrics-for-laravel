@@ -21,6 +21,11 @@ final class Sqlite implements QueryExpression
         };
     }
 
+    public function addMinutes(string $column, int $minutes): string
+    {
+        return sprintf("datetime(%s, '%+d minutes')", $column, $minutes);
+    }
+
     /**
      * An ISO-8601 `IYYY-IW` key, computed — because SQLite has no ISO week.
      *

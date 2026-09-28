@@ -4,9 +4,11 @@ declare(strict_types=1);
 
 namespace RoundlyConsulting\Metrics\Traits;
 
+use Carbon\CarbonImmutable;
 use RoundlyConsulting\Metrics\Enums\Period;
 use RoundlyConsulting\Metrics\Exceptions\InvalidRangeException;
 use RoundlyConsulting\Metrics\Ranges\Range;
+use RoundlyConsulting\Metrics\Support\Timezones;
 
 trait Ranges
 {
@@ -41,8 +43,8 @@ trait Ranges
     }
 
     /**
-     * Resolve this metric's ranges in an explicit timezone, overriding
-     * config('metrics.timezone') and the application timezone.
+     * Resolve this metric's ranges — and label its trend buckets — in an explicit
+     * timezone, overriding config('metrics.timezone') and the application timezone.
      */
     public function timezone(?string $timezone): self
     {
@@ -61,5 +63,27 @@ trait Ranges
 
         return $period->toRange($this->customRangeStart, $this->customRangeEnd)
             ->usingTimezone($this->timezoneOverride);
+    }
+
+    /**
+     * The zone this metric's ranges are resolved and its buckets labelled in.
+     */
+    protected function reportingTimezone(): string
+    {
+        return Timezones::reporting($this->timezoneOverride);
+    }
+
+    /**
+     * A range's bounds on the storage clock, ready to bind. Laravel formats a bound Carbon
+     * as its bare wall clock, so a bound left on the reporting clock would be compared with
+     * rows stored on another clock and shift the window by the difference.
+     *
+     * @return list<CarbonImmutable>
+     */
+    protected function storageBounds(Range $range): array
+    {
+        $storage = Timezones::storage();
+
+        return [$range->start()->setTimezone($storage), $range->end()->setTimezone($storage)];
     }
 }

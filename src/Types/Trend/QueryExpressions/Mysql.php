@@ -30,4 +30,9 @@ final class Mysql implements QueryExpression
 
         return "date_format({$column}, '{$formats[$unit]}')";
     }
+
+    public function addMinutes(string $column, int $minutes): string
+    {
+        return "({$column} + interval {$minutes} minute)";
+    }
 }
