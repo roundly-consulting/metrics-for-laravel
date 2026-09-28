@@ -29,6 +29,8 @@ return new class extends Migration
             // "150.12346"`. The schema was simply wrong about its own data.
             $table->decimal('balance', 20, 10)->default(0);
             $table->string('type')->default('user');
+            // Nullable, unlike `type`: a partition's NULL group is a real group of rows.
+            $table->string('plan')->nullable();
             $table->timestamps();
         });
     }
