@@ -3,9 +3,13 @@
 declare(strict_types=1);
 
 use RoundlyConsulting\Metrics\Enums\Unit;
+use RoundlyConsulting\Metrics\Facades\Metrics;
 use RoundlyConsulting\Metrics\Tests\Metrics\Trend\QueryExpressions\MarkerQueryExpression;
 use RoundlyConsulting\Metrics\Tests\Metrics\Trend\UsersBalance;
 use RoundlyConsulting\Metrics\Tests\Metrics\Value\Users;
+use RoundlyConsulting\Metrics\Tests\Models\User;
+use RoundlyConsulting\Metrics\Types\Trend\PendingTrend;
+use RoundlyConsulting\Metrics\Types\Trend\Trend;
 use RoundlyConsulting\Testing\Database\DriverMatrix;
 
 it('publishes the config file', function (): void {
@@ -52,4 +56,21 @@ it('applies the configured default range, unit and precision', function (): void
     expect($value->toArray()['range']['current'])->toBe('TODAY')
         ->and((fn () => $this->roundingPrecision)->call($value))->toBe(3)
         ->and((fn () => $this->unit)->call($trend))->toBe(Unit::Week);
+});
+
+/**
+ * `config('metrics.trend_drivers')` is the one driver registry. A public static
+ * `$queryExpressions` used to live on the ComputesTrend trait, so `Trend` and the
+ * `PendingTrend` behind `Metrics::trend()` each had their own copy: a driver registered on
+ * `Trend::$queryExpressions`, as the README said to, never reached `Metrics::trend()`.
+ */
+it('dispatches both trend styles through the configured drivers alone', function (): void {
+    config()->set('metrics.trend_drivers', [DriverMatrix::driver() => MarkerQueryExpression::class]);
+
+    createUsersForMetricsTesting([['balance' => 100, 'created_at' => '2023-02-26 10:00:00']]);
+
+    expect(fn () => Metrics::trend()->count(User::query(), 'id')->result())->toThrow(RuntimeException::class, 'marker driver used')
+        ->and(fn () => UsersBalance::make()->result())->toThrow(RuntimeException::class, 'marker driver used')
+        ->and(property_exists(Trend::class, 'queryExpressions'))->toBeFalse()
+        ->and(property_exists(PendingTrend::class, 'queryExpressions'))->toBeFalse();
 });

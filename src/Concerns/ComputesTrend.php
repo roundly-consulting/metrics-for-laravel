@@ -24,11 +24,6 @@ trait ComputesTrend
 {
     use Unit;
 
-    /**
-     * @var array<string, class-string<QueryExpression>>
-     */
-    public static array $queryExpressions = [];
-
     protected bool $gapFilling = true;
 
     protected ?string $seriesColumn = null;
@@ -386,7 +381,7 @@ trait ComputesTrend
     {
         $driver = $query->getModel()->getConnection()->getDriverName();
 
-        $expressions = static::$queryExpressions + $this->configuredTrendDrivers();
+        $expressions = $this->configuredTrendDrivers();
 
         if (array_key_exists($driver, $expressions)) {
             return resolve($expressions[$driver]);

@@ -10,8 +10,6 @@ use RoundlyConsulting\Metrics\Types\Trend\Trend;
 
 class UsersForMissingQueryExpression extends Trend
 {
-    public static array $queryExpressions = [];
-
     protected function calculate(): Result
     {
         return $this->count(User::query(), 'created_at');
