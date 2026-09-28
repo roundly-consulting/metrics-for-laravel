@@ -76,7 +76,9 @@ trait ComputesPartition
      */
     protected function cacheDiscriminators(): array
     {
-        return ['limit' => $this->partitionLimit, 'other' => $this->otherLabel];
+        // The resolved label, not the override: the default runs through the translator,
+        // and the bucket's key is part of the cached result.
+        return ['limit' => $this->partitionLimit, 'other' => $this->partitionLimit === null ? null : $this->resolveOtherLabel()];
     }
 
     /**

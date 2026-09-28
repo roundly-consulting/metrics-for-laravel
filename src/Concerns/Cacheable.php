@@ -11,6 +11,7 @@ use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use RoundlyConsulting\Metrics\Exceptions\InvalidConfigurationException;
 use RoundlyConsulting\Metrics\Support\ResultCache;
+use RoundlyConsulting\Metrics\Support\Timezones;
 use RoundlyConsulting\PackageToolkit\Support\Config;
 
 trait Cacheable
@@ -103,8 +104,9 @@ trait Cacheable
 
     /**
      * The custom key when one is set, else a key derived from everything that makes the
-     * result unique: the class, the registry key, the range and timezone, the ad-hoc
-     * builder's query ({@see cacheIdentity()}) and the type's options.
+     * result unique: the class, the registry key, the range, the reporting and storage
+     * timezones, the precision and rounding mode, the ad-hoc builder's query
+     * ({@see cacheIdentity()}) and the type's options.
      */
     protected function resolveCacheKey(): string
     {
@@ -113,7 +115,17 @@ trait Cacheable
         }
 
         $parts = array_merge(
-            [static::class, $this->resolvedKey, $this->range, $this->customRangeStart, $this->customRangeEnd, $this->timezoneOverride],
+            [
+                static::class,
+                $this->resolvedKey,
+                $this->range,
+                $this->customRangeStart,
+                $this->customRangeEnd,
+                'timezone' => $this->reportingTimezone(),
+                'storage_timezone' => Timezones::storage(),
+                'precision' => $this->roundingPrecision,
+                'rounding' => $this->roundingMode->name,
+            ],
             ['identity' => $this->cacheIdentity()],
             $this->cacheDiscriminators(),
         );
