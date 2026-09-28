@@ -39,7 +39,7 @@ metrics without an admin panel, for any front-end.
 composer require roundly-consulting/metrics-for-laravel
 ```
 
-The service provider and the `Metric` facade are auto-discovered. The package works against
+The service provider and the `Metrics` facade are auto-discovered. The package works against
 your existing models and tables — there are no migrations.
 
 Optionally publish the config file:
@@ -50,33 +50,55 @@ php artisan vendor:publish --tag="metrics-config"
 
 ## Quick start
 
-Build a metric inline with the `Metric` facade — no class required:
+Build a metric inline with the `Metrics` facade — no class required:
 
 ```php
 use App\Models\User;
 use RoundlyConsulting\Metrics\Enums\Period;
-use RoundlyConsulting\Metrics\Facades\Metric;
+use RoundlyConsulting\Metrics\Facades\Metrics;
 
-$data = Metric::value()
+$data = Metrics::value()
     ->count(User::query())
     ->range(Period::Today)
     ->withChangeAgainstPreviousPeriod()
     ->toArray();
 ```
 
-The facade exposes one builder per metric type — `Metric::value()`, `Metric::trend()`,
-`Metric::progress()`, and `Metric::partition()`:
+The facade exposes one builder per metric type — `Metrics::value()`, `Metrics::trend()`,
+`Metrics::progress()`, and `Metrics::partition()`:
 
 ```php
-Metric::trend()->count(User::query(), 'created_at')->daily()->range(Period::MonthToDate)->toArray();
-Metric::progress()->sum(Order::query(), 'total')->target(10000)->range(Period::MonthToDate)->toArray();
-Metric::partition()->count(User::query(), 'plan')->toArray();
+Metrics::trend()->count(User::query(), 'created_at')->daily()->range(Period::MonthToDate)->toArray();
+Metrics::progress()->sum(Order::query(), 'total')->target(10000)->range(Period::MonthToDate)->toArray();
+Metrics::partition()->count(User::query(), 'plan')->toArray();
 ```
+
+## Reading a result
+
+Every metric gives you two views of the same calculation:
+
+- `result()` — the **typed result object** (`ValueResult`, `TrendResult`, `ProgressResult` or
+  `PartitionResult`), for PHP code that works with the numbers;
+- `toArray()` — the JSON-ready envelope (name, range, formatted result) for a front-end.
+
+```php
+$revenue = Metrics::value()->sum(Order::query(), 'total')->range(Period::ThisMonth)->result();
+
+$revenue->value();       // 15230.0
+$revenue->change();      // percentage change, when a comparison was requested
+
+Metrics::trend()->count(User::query(), 'id')->daily()->result()->values();   // list<float>
+```
+
+The typed bases narrow the return type, so `result()` on a `Value` metric is a `ValueResult`, on
+a `Progress` metric a `ProgressResult` (which is also a `ValueResult`), and so on. Both views go
+through the result cache.
 
 ## Metric types (reusable classes)
 
-For metrics you reuse across a dashboard, define a class by extending the base type and
-implementing `calculate()`, which returns the matching result object.
+For metrics you reuse across a dashboard, define a class by extending one of the typed bases
+(all of which extend `RoundlyConsulting\Metrics\Metric`) and implementing `calculate()`, which
+returns the matching result object.
 
 | Type | Extend | `calculate()` returns | Good for |
 |---|---|---|---|
@@ -169,27 +191,75 @@ Register your dashboard's metrics under short keys and resolve them by name — 
 endpoint that returns many tiles at once:
 
 ```php
-use RoundlyConsulting\Metrics\Facades\Metric;
+use RoundlyConsulting\Metrics\Facades\Metrics;
 
 // in a service provider boot()
-Metric::register('registered_users', RegisteredUsers::class);
-Metric::register('revenue', MonthlyRevenueGoal::class);
-Metric::register('users_by_plan', fn () => UsersByPlan::make());
+Metrics::register('registered_users', RegisteredUsers::class);
+Metrics::register('revenue', MonthlyRevenueGoal::class);
+Metrics::register('users_by_plan', fn () => UsersByPlan::make());
 
 // in a controller
 return response()->json(
-    collect(Metric::all())->map->toArray()
+    collect(Metrics::all())->map->toArray()
 );
 
 // or a single metric by key, applying the request's period
 return response()->json(
-    Metric::get($key)->range($request->input('period', 'TODAY'))->toArray()
+    Metrics::get($key)->range($request->input('period', 'TODAY'))->toArray()
 );
 ```
 
-Register a class-string, an instance, or a closure. `Metric::get()` throws
+Register a class-string, an instance, or a closure. `Metrics::get()` throws
 `RoundlyConsulting\Metrics\Exceptions\UnknownMetricException` for an unregistered key.
-`Metric::keys()` lists the registered keys without resolving them.
+`Metrics::keys()` lists the registered keys without resolving them, `Metrics::has('revenue')`
+checks one, and `Metrics::unregister('revenue')` removes one (a no-op for an unknown key).
+
+```php
+Metrics::get('revenue')->result()->value();   // the typed result of a registered metric
+```
+
+| Method | Returns | Purpose |
+|---|---|---|
+| `register(string $key, class-string\|Metric\|Closure $metric)` | `MetricsManager` | add a metric to the registry (chainable) |
+| `unregister(string $key)` | `MetricsManager` | remove it (chainable) |
+| `get(string $key)` | `Metric` | resolve one, tagged with its key |
+| `has(string $key)` / `keys()` / `all()` | `bool` / `list<string>` / `array<string, Metric>` | inspect the registry |
+| `dashboard(array $keys)` | `Dashboard` | resolve many at once |
+| `value()` / `trend()` / `progress()` / `partition()` | a pending builder | build a metric inline |
+| `forget(string\|Metric $metric)` | `void` | forget one metric's cached results |
+| `flushCache()` | `void` | forget every cached result |
+
+## Without the facade
+
+The facade is a thin layer over `RoundlyConsulting\Metrics\MetricsManager`, a container
+singleton. Inject it to use the same API — `Metrics::fake()` swaps the injected instance too:
+
+```php
+use RoundlyConsulting\Metrics\MetricsManager;
+
+final class DashboardController
+{
+    public function __construct(private MetricsManager $metrics) {}
+
+    public function __invoke(): array
+    {
+        return [
+            'revenue' => $this->metrics->get('revenue')->result()->value(),
+            'signups' => $this->metrics->value()->count(User::query())->range('TODAY')->result()->value(),
+        ];
+    }
+}
+```
+
+The metric classes work on their own too — no registry, no facade:
+
+```php
+RegisteredUsers::make()->range('TODAY')->result();   // ValueResult
+app(RegisteredUsers::class)->toArray();             // resolved through the container
+```
+
+Metrics is a calculation package, so it has no action classes: the builders and your metric
+classes are the behaviour, and the manager only registers, resolves and invalidates them.
 
 ## Dashboards (batch resolution)
 
@@ -198,15 +268,15 @@ Resolve many registered metrics at once into a single keyed envelope, sharing on
 
 ```php
 use RoundlyConsulting\Metrics\Enums\Period;
-use RoundlyConsulting\Metrics\Facades\Metric;
+use RoundlyConsulting\Metrics\Facades\Metrics;
 
-return Metric::dashboard(['users', 'revenue', 'churn'])
+return Metrics::dashboard(['users', 'revenue', 'churn'])
     ->range(Period::ThisMonth)
     ->toArray();
 // ['users' => [...envelope...], 'revenue' => [...], 'churn' => [...]]
 ```
 
-The dashboard is `Responsable`, so a controller can `return Metric::dashboard([...])->range(...)`
+The dashboard is `Responsable`, so a controller can `return Metrics::dashboard([...])->range(...)`
 directly and get the JSON envelope.
 
 ## Returning metrics from controllers
@@ -218,7 +288,7 @@ responsibility:
 ```php
 public function show(string $key)
 {
-    return Metric::get($key)->range(request('period', 'TODAY'));
+    return Metrics::get($key)->range(request('period', 'TODAY'));
 }
 ```
 
@@ -230,7 +300,7 @@ the immediately-preceding window; `compareTo()` compares against any range inste
 ```php
 use RoundlyConsulting\Metrics\Enums\Period;
 
-Metric::value()
+Metrics::value()
     ->count(Order::query())
     ->range(Period::ThisMonth)
     ->compareTo(Period::LastYear)   // vs. the same metric a year ago
@@ -242,7 +312,7 @@ Metric::value()
 Cap a partition to its largest groups and roll the rest into a single bucket:
 
 ```php
-Metric::partition()
+Metrics::partition()
     ->count(User::query(), 'country')
     ->limit(5)                       // 5 groups + "Other"
     ->otherLabel('Elsewhere')        // optional; defaults to the translatable "Other"
@@ -253,7 +323,7 @@ Map raw group keys to display labels with `labelUsing()` — raw keys stay avail
 result's `keys()`, and the labels appear under a `labels` key:
 
 ```php
-Metric::partition()
+Metrics::partition()
     ->count(User::query(), 'country_id')
     ->labelUsing(fn (int|string $key): string => Country::name($key))
     ->toArray();
@@ -289,26 +359,37 @@ Event::listen(function (MetricCalculated $event): void {
 
 ## Testing helper
 
-`Metric::fake()` swaps the registry for a recording fake so host-app tests can stub metric
-results and assert what was resolved — mirroring Laravel's `Http::fake()`:
+`Metrics::fake()` swaps the manager — behind the facade and in the container, so injected
+managers get it too — for a recording `RoundlyConsulting\Metrics\Testing\MetricsFake`. It
+keeps every metric you had registered, answers the keys you pass with canned results, and
+records what was resolved and invalidated — mirroring Laravel's `Http::fake()`:
 
 ```php
-use RoundlyConsulting\Metrics\Facades\Metric;
+use RoundlyConsulting\Metrics\Facades\Metrics;
 
-$fake = Metric::fake([
+$fake = Metrics::fake([
     'active-users' => 1200,                  // a number becomes a value envelope
     'revenue'      => ['value' => 5000.0],   // an array is used as the raw result
 ]);
 
 // ...exercise the code under test...
 
-Metric::assertResolved('active-users');
+Metrics::assertResolved('active-users');
 $fake->assertResolvedTimes('active-users', 1);
 $fake->assertNotResolved('revenue');
 $fake->assertNothingResolved();
+
+// forget() and flushCache() are recorded, and the cache is left alone
+$fake->assertForgotten('revenue');          // by key, or by class for an unregistered metric
+$fake->assertNotForgotten('active-users');
+$fake->assertNothingForgotten();
+$fake->assertCacheFlushed();
+$fake->assertCacheNotFlushed();
 ```
 
-Canned values may be a number, an array (raw result), a `Result`, or a full `Metrics`
+Canned results are never cached, so one test's canned value can't leak into the next.
+
+Canned values may be a number, an array (raw result), a `Result`, or a full `Metric`
 instance.
 
 ## Configuring a metric
@@ -451,7 +532,7 @@ Every bucket in the selected range is present in the output — empty buckets ar
 buckets that actually have rows:
 
 ```php
-Metric::trend()->count(User::query(), 'created_at')->daily()->withoutGapFilling()->toArray();
+Metrics::trend()->count(User::query(), 'created_at')->daily()->withoutGapFilling()->toArray();
 ```
 
 ### Multi-series trends
@@ -460,7 +541,7 @@ Split a trend by a dimension with `groupBy()`. The combined totals stay under `t
 an additive `series` key holds one bucket set per dimension value:
 
 ```php
-Metric::trend()->count(User::query(), 'created_at')->daily()->groupBy('plan')->toArray();
+Metrics::trend()->count(User::query(), 'created_at')->daily()->groupBy('plan')->toArray();
 // result => [
 //   'trends' => ['2024-01-01' => 30.0, ...],            // totals across series
 //   'series' => [
@@ -477,15 +558,30 @@ Each series is gap-filled across the same range, so every series shares the same
 Caching is **off by default**. Enable it globally via config, or per metric:
 
 ```php
-Metric::value()->count(User::query())->range('TODAY')->cacheFor(now()->addHour())->toArray();
+Metrics::value()->count(User::query())->range('TODAY')->cacheFor(now()->addHour())->toArray();
 
 $metric->cache(120);          // cache for 120 seconds
 $metric->cacheKey('users');   // override the derived cache key
 $metric->dontCache();         // force a fresh computation
 ```
 
-The cache key is derived from the metric class, range, unit, and target, so different
-configurations never collide. Only the `result` portion is cached.
+The cache key is derived from the metric class, its registry key, the range and timezone, the
+type's options (unit, target, comparison, limit…) and — for inline builders — the query and
+aggregate, so different metrics never collide. Only the `result` portion is cached, as plain
+data: `result()` rebuilds the typed object from it.
+
+### Forgetting cached results
+
+```php
+Metrics::forget('revenue');       // every cached range/timezone/option of one registered metric
+Metrics::forget($metric);         // an unregistered metric instance (by its class)
+Metrics::flushCache();            // every cached metric result
+```
+
+Invalidation works on every cache store, with or without tags: each entry records the cache
+generation it was written under, and forgetting starts a new generation, so older entries are
+recalculated on their next read and overwritten in place. It covers custom `cacheKey()` entries
+too. `forget()` throws `UnknownMetricException` for a key that isn't registered.
 
 Globally, `METRICS_CACHE_ENABLED` accepts `true`/`false`/`1`/`0`/`on`/`off`, and
 `METRICS_CACHE_TTL` is a whole number of seconds between `1` and `31536000` (one year) — the
@@ -501,7 +597,7 @@ front-end. The formatted output appears under a `formatted` key alongside the ra
 ```php
 use Illuminate\Support\Number;
 
-Metric::value()
+Metrics::value()
     ->sum(Order::query(), 'total')
     ->formatUsing(fn (float $value): string => Number::currency($value, 'USD'))
     ->toArray();
@@ -512,11 +608,13 @@ For trends and partitions the formatter is applied to every point.
 
 ## Typed result accessors
 
-Result objects expose typed getters for chart consumers, in addition to `toArray()`:
+`$metric->result()` returns the result object; it exposes typed getters for chart consumers,
+in addition to `toArray()`. `Result::fromArray()` rebuilds one from its array form:
 
 - `ValueResult`: `value()`, `previous()`, `change()`, `isIncrease()`
 - `TrendResult`: `trends()`, `series()`, `labels()`, `values()`
-- `ProgressResult`: `value()`, `progress()`, `target()`, `previous()`, `isIncrease()`
+- `ProgressResult` (a `ValueResult`): `value()`, `progress()`, `target()`, `previous()`,
+  `previousProgress()`, `change()`, `avoid()`, `isIncrease()`
 - `PartitionResult`: `partitions()`, `labels()`, `keys()`, `values()`
 
 ## Configuration
@@ -557,17 +655,17 @@ metric at the model the event writes, or record a lightweight counter and count 
 ```php
 use App\Models\Order;
 use Illuminate\Support\Facades\Event;
-use RoundlyConsulting\Metrics\Facades\Metric;
+use RoundlyConsulting\Metrics\Facades\Metrics;
 
 // Register a metric over whatever table the events already populate.
-Metric::register('orders_today', fn () => Metric::value()->count(Order::query())->range('TODAY'));
+Metrics::register('orders_today', fn () => Metrics::value()->count(Order::query())->range('TODAY'));
 
 // Or fan a package's event into your own metrics table, then build a metric over it.
 Event::listen(OrderPlaced::class, function (OrderPlaced $event): void {
     MetricEvent::create(['name' => 'order_placed', 'occurred_at' => now()]);
 });
 
-Metric::register('orders_placed', fn () => Metric::trend()
+Metrics::register('orders_placed', fn () => Metrics::trend()
     ->count(MetricEvent::query()->where('name', 'order_placed'), 'occurred_at')
     ->daily());
 ```
