@@ -96,7 +96,7 @@ trait Cacheable
         }
 
         return Config::using(InvalidConfigurationException::class)
-            ->intBetween('metrics.cache.ttl', 1, 31_536_000, 300);
+            ->integer('metrics.cache.ttl', 300, min: 1, max: 31_536_000);
     }
 
     protected function cacheRepository(): Repository

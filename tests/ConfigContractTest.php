@@ -31,7 +31,7 @@ it('ships exactly the config keys it reads', function (): void {
 
         // The two cache keys `.env` sets as strings are read through the toolkit's
         // validating accessors — `Config::using(…)->boolean('metrics.cache.enabled')` and
-        // `Config::using(…)->intBetween('metrics.cache.ttl', …)` — not a bare `config()`
+        // `Config::using(…)->integer('metrics.cache.ttl', …)` — not a bare `config()`
         // call, so the scraper needs telling that those literals are reads. Named exactly,
         // not by a `metrics.` prefix: every other key must still prove itself through
         // `config()`, and a literal that vanishes from src still fails the reverse check.
