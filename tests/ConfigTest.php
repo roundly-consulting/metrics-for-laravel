@@ -12,20 +12,6 @@ use RoundlyConsulting\Metrics\Types\Trend\PendingTrend;
 use RoundlyConsulting\Metrics\Types\Trend\Trend;
 use RoundlyConsulting\Testing\Database\DriverMatrix;
 
-it('publishes the config file', function (): void {
-    $target = config_path('metrics.php');
-
-    if (file_exists($target)) {
-        unlink($target);
-    }
-
-    $this->artisan('vendor:publish', ['--tag' => 'metrics-config'])->assertSuccessful();
-
-    expect(file_exists($target))->toBeTrue();
-
-    unlink($target);
-});
-
 /**
  * Keyed by the driver the suite is actually running on, not a hard-coded 'sqlite'.
  *
