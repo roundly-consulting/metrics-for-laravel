@@ -27,7 +27,11 @@ final class MetricsServiceProvider extends PackageServiceProvider
                 return [
                     'Registered metrics' => (string) count(app(MetricsManager::class)->keys()),
                     'Result cache' => Config::boolean('metrics.cache.enabled') ? 'ENABLED' : 'OFF',
-                    'Default range' => is_string($range) ? $range : 'ALL',
+                    'Default range' => match (true) {
+                        $range === null => 'ALL',
+                        is_string($range), is_int($range) => (string) $range,
+                        default => 'INVALID',
+                    },
                 ];
             });
     }

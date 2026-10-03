@@ -10,7 +10,9 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use RoundlyConsulting\Metrics\Concerns\Cacheable;
 use RoundlyConsulting\Metrics\Concerns\FormatsValues;
+use RoundlyConsulting\Metrics\Enums\Period;
 use RoundlyConsulting\Metrics\Events\MetricCalculated;
+use RoundlyConsulting\Metrics\Exceptions\InvalidConfigurationException;
 use RoundlyConsulting\Metrics\Exceptions\UnexpectedResultException;
 use RoundlyConsulting\Metrics\Support\ResultCache;
 use RoundlyConsulting\Metrics\Traits\Description;
@@ -22,6 +24,7 @@ use RoundlyConsulting\Metrics\Traits\Ranges;
 use RoundlyConsulting\Metrics\Traits\Rounding;
 use RoundlyConsulting\Metrics\Traits\Suffix;
 use RoundlyConsulting\Metrics\Types\Result;
+use RoundlyConsulting\PackageToolkit\Support\Config;
 
 /**
  * The base of every metric. Extend a typed base — `Value`, `Trend`, `Progress` or
@@ -79,16 +82,16 @@ abstract class Metric implements Arrayable, Responsable
 
     protected function applyConfiguredDefaults(): void
     {
-        $range = config('metrics.default_range');
-
-        if (is_string($range)) {
-            $this->range = $range;
+        // Unset keeps the metric's own default; anything else must be valid — an unknown
+        // range or a non-integer precision throws instead of being silently ignored.
+        if (config('metrics.default_range') !== null) {
+            $this->range = Config::using(InvalidConfigurationException::class)
+                ->enum('metrics.default_range', Period::class)->value;
         }
 
-        $precision = config('metrics.precision');
-
-        if (is_int($precision)) {
-            $this->roundingPrecision = $precision;
+        if (config('metrics.precision') !== null) {
+            $this->roundingPrecision = Config::using(InvalidConfigurationException::class)
+                ->integer('metrics.precision', $this->roundingPrecision);
         }
     }
 

@@ -10,6 +10,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Query\Builder as QueryBuilder;
 use Illuminate\Support\Collection;
 use RoundlyConsulting\Metrics\Enums\Unit as UnitEnum;
+use RoundlyConsulting\Metrics\Exceptions\InvalidConfigurationException;
 use RoundlyConsulting\Metrics\Exceptions\MissingTrendQueryExpressionException;
 use RoundlyConsulting\Metrics\Ranges\Custom;
 use RoundlyConsulting\Metrics\Ranges\Range;
@@ -18,6 +19,7 @@ use RoundlyConsulting\Metrics\Support\Timezones;
 use RoundlyConsulting\Metrics\Traits\Unit;
 use RoundlyConsulting\Metrics\Types\Trend\QueryExpressions\QueryExpression;
 use RoundlyConsulting\Metrics\Types\Trend\TrendResult;
+use RoundlyConsulting\PackageToolkit\Support\Config;
 use stdClass;
 
 trait ComputesTrend
@@ -32,10 +34,10 @@ trait ComputesTrend
     {
         parent::applyConfiguredDefaults();
 
-        $unit = config('metrics.default_unit');
-
-        if (is_string($unit) && ($resolved = UnitEnum::tryFrom($unit)) !== null) {
-            $this->unit = $resolved;
+        // Unset keeps the trend's own unit; an unknown one throws instead of being ignored.
+        if (config('metrics.default_unit') !== null) {
+            $this->unit = Config::using(InvalidConfigurationException::class)
+                ->enum('metrics.default_unit', UnitEnum::class);
         }
     }
 
@@ -395,18 +397,30 @@ trait ComputesTrend
      */
     protected function configuredTrendDrivers(): array
     {
-        $drivers = config('metrics.trend_drivers');
+        $drivers = config('metrics.trend_drivers') ?? [];
 
         if (! is_array($drivers)) {
-            return [];
+            throw new InvalidConfigurationException(sprintf(
+                'Configuration value [metrics.trend_drivers] must be a driver => class map, [%s] given.',
+                get_debug_type($drivers),
+            ));
         }
 
         $valid = [];
 
+        // A broken entry throws naming it, rather than being dropped and surfacing later as
+        // a misleading "no query expression for this driver".
         foreach ($drivers as $name => $class) {
-            if (is_string($name) && is_string($class) && is_a($class, QueryExpression::class, true)) {
-                $valid[$name] = $class;
+            if (! is_string($class) || ! is_a($class, QueryExpression::class, true)) {
+                throw new InvalidConfigurationException(sprintf(
+                    'Configuration value [metrics.trend_drivers.%s] must be a class-string of [%s], [%s] given.',
+                    $name,
+                    QueryExpression::class,
+                    is_scalar($class) ? var_export($class, true) : get_debug_type($class),
+                ));
             }
+
+            $valid[(string) $name] = $class;
         }
 
         return $valid;

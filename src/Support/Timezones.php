@@ -33,9 +33,11 @@ final class Timezones
 
     public static function reporting(?string $override = null): string
     {
-        $timezone = $override ?? config('metrics.timezone');
+        if ($override !== null) {
+            return $override !== '' ? $override : self::storage();
+        }
 
-        return is_string($timezone) && $timezone !== '' ? $timezone : self::storage();
+        return MetricsConfig::optionalString('metrics.timezone', config('metrics.timezone')) ?? self::storage();
     }
 
     /**

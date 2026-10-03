@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-use RoundlyConsulting\Metrics\Exceptions\MissingTrendQueryExpressionException;
+use RoundlyConsulting\Metrics\Exceptions\InvalidConfigurationException;
 use RoundlyConsulting\Metrics\Facades\Metrics;
 use RoundlyConsulting\Metrics\Tests\Metrics\Partition\Users as PartitionUsers;
 use RoundlyConsulting\Metrics\Tests\Metrics\Progress\Users as ProgressUsers;
@@ -54,8 +54,8 @@ it('caches a value metric for a fixed number of seconds', function (): void {
     expect($metrics['result']['value'])->toBe(3.0);
 });
 
-it('ignores a non-array trend driver configuration', function (): void {
+it('throws for a non-array trend driver configuration (strict config)', function (): void {
     config()->set('metrics.trend_drivers', 'not-an-array');
 
     UsersBalance::make()->daily()->toArray();
-})->throws(MissingTrendQueryExpressionException::class);
+})->throws(InvalidConfigurationException::class, 'metrics.trend_drivers');

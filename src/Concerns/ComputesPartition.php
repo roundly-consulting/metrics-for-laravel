@@ -7,6 +7,7 @@ namespace RoundlyConsulting\Metrics\Concerns;
 use Closure;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
+use RoundlyConsulting\Metrics\Support\MetricsConfig;
 use RoundlyConsulting\Metrics\Support\RawExpression;
 use RoundlyConsulting\Metrics\Types\Partition\PartitionResult;
 use stdClass;
@@ -179,9 +180,7 @@ trait ComputesPartition
             return $this->otherLabel;
         }
 
-        $configured = config('metrics.partition.other_label');
-
-        return (string) __(is_string($configured) ? $configured : 'Other');
+        return (string) __(MetricsConfig::string('metrics.partition.other_label', config('metrics.partition.other_label'), 'Other'));
     }
 
     /**

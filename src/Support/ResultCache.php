@@ -29,16 +29,12 @@ final class ResultCache
 {
     public static function repository(): Repository
     {
-        $store = config('metrics.cache.store');
-
-        return Cache::store(is_string($store) ? $store : null);
+        return Cache::store(MetricsConfig::optionalString('metrics.cache.store', config('metrics.cache.store')));
     }
 
     public static function prefix(): string
     {
-        $prefix = config('metrics.cache.prefix', 'metrics');
-
-        return is_string($prefix) ? $prefix : 'metrics';
+        return MetricsConfig::string('metrics.cache.prefix', config('metrics.cache.prefix'), 'metrics');
     }
 
     /**
