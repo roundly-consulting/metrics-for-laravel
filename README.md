@@ -632,11 +632,12 @@ generation it was written under, and forgetting starts a new generation, so olde
 recalculated on their next read and overwritten in place. It covers custom `cacheKey()` entries
 too. `forget()` throws `UnknownMetricException` for a key that isn't registered.
 
-Globally, `METRICS_CACHE_ENABLED` accepts `true`/`false`/`1`/`0`/`on`/`off`, and
+Globally, `METRICS_CACHE_ENABLED` accepts `true`/`false`/`1`/`0`/`on`/`off`/`yes`/`no`, and
 `METRICS_CACHE_TTL` is a whole number of seconds between `1` and `31536000` (one year) — the
-string `.env` produces is honoured. An unusable TTL throws
+string `.env` produces is honoured. An unusable TTL or switch value (say
+`METRICS_CACHE_ENABLED=disabled`) throws
 `RoundlyConsulting\Metrics\Exceptions\InvalidConfigurationException` instead of silently
-falling back to 300 seconds.
+falling back to the default.
 
 ## Number formatting
 

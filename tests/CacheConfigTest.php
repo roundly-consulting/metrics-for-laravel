@@ -138,3 +138,14 @@ it('reads METRICS_CACHE_ENABLED=1 from .env as enabled', function (): void {
     createUsersForMetricsTesting([['balance' => 1, 'created_at' => now()]]);
     expect(todayUserCount())->toBe(1.0);
 });
+
+it('throws the package exception for a METRICS_CACHE_ENABLED typo (strict config)', function (): void {
+    bootCacheConfigFromEnv(['METRICS_CACHE_ENABLED' => 'disabled']);
+    config()->set('metrics.cache.store', 'array');
+
+    expect(config('metrics.cache.enabled'))->toBe('disabled')
+        ->and(fn () => todayUserCount())->toThrow(
+            InvalidConfigurationException::class,
+            'Configuration value [metrics.cache.enabled] must be a boolean (true/false, 1/0, on/off or yes/no), [disabled] given.',
+        );
+});

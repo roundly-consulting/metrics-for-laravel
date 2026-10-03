@@ -78,7 +78,9 @@ trait Cacheable
 
         // `.env` hands the flag over as a string ('1', 'off', …), so parse it
         // as a boolean rather than casting: (bool) 'off' would switch caching on.
-        return Config::boolean('metrics.cache.enabled');
+        // A typo throws the package's own exception, like an unusable ttl.
+        return Config::using(InvalidConfigurationException::class)
+            ->boolean('metrics.cache.enabled');
     }
 
     /**

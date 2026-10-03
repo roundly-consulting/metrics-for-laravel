@@ -44,9 +44,9 @@ return [
     | Caching is OFF by default. When enabled, a metric's computed result is
     | remembered for "ttl" seconds (1 to 31536000, i.e. up to one year) in the
     | given store. Both accept the strings .env produces: METRICS_CACHE_TTL=600,
-    | METRICS_CACHE_ENABLED=true/false/1/0/on/off. An unusable ttl throws an
-    | InvalidConfigurationException. Individual metrics can still opt in/out at
-    | runtime via cache()/cacheFor()/dontCache().
+    | METRICS_CACHE_ENABLED=true/false/1/0/on/off/yes/no. An unusable ttl or
+    | switch value throws an InvalidConfigurationException. Individual metrics
+    | can still opt in/out at runtime via cache()/cacheFor()/dontCache().
     |
     */
 
