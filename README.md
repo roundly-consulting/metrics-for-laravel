@@ -637,7 +637,7 @@ Globally, `METRICS_CACHE_ENABLED` accepts `true`/`false`/`1`/`0`/`on`/`off`/`yes
 string `.env` produces is honoured. An unusable TTL or switch value (say
 `METRICS_CACHE_ENABLED=disabled`) throws
 `RoundlyConsulting\Metrics\Exceptions\InvalidConfigurationException` instead of silently
-falling back to the default.
+falling back to the default; a blank one (`METRICS_CACHE_TTL=`) is not set and takes it.
 
 ## Number formatting
 
@@ -685,11 +685,12 @@ The published `config/metrics.php` documents every key:
 | `trend_drivers` | `array` | mysql/mariadb/pgsql/sqlite | — |
 
 Every key is read strictly and throws `RoundlyConsulting\Metrics\Exceptions\InvalidConfigurationException`
-naming it when present but unusable; only an unset (`null`) key takes its default.
-`default_range` must be a `Period` value (`ALL`, `TODAY`, `30`, …) and `default_unit` a `Unit`
-value (`MINUTE` … `YEAR`, exact case); `precision` must be an integer (digit strings accepted);
-`timezone`, `cache.store`, `cache.prefix` and `partition.other_label` must be non-empty strings;
-every `trend_drivers` entry must name a `QueryExpression` class. A typo is never silently ignored.
+naming it when present but unusable; a key that is not set — absent, `null` or blank (a host's
+`KEY=`) — takes its default. `default_range` must be a `Period` value (`ALL`, `TODAY`, `30`, …) and
+`default_unit` a `Unit` value (`MINUTE` … `YEAR`, exact case); `precision` must be an integer
+(digit strings accepted); `timezone`, `cache.store`, `cache.prefix` and `partition.other_label`
+must be strings; every `trend_drivers` entry must name a `QueryExpression` class. A typo is never
+silently ignored.
 
 ## Integrates with
 
