@@ -684,6 +684,13 @@ The published `config/metrics.php` documents every key:
 | `partition.other_label` | `string` | `Other` | — |
 | `trend_drivers` | `array` | mysql/mariadb/pgsql/sqlite | — |
 
+Every key is read strictly and throws `RoundlyConsulting\Metrics\Exceptions\InvalidConfigurationException`
+naming it when present but unusable; only an unset (`null`) key takes its default.
+`default_range` must be a `Period` value (`ALL`, `TODAY`, `30`, …) and `default_unit` a `Unit`
+value (`MINUTE` … `YEAR`, exact case); `precision` must be an integer (digit strings accepted);
+`timezone`, `cache.store`, `cache.prefix` and `partition.other_label` must be non-empty strings;
+every `trend_drivers` entry must name a `QueryExpression` class. A typo is never silently ignored.
+
 ## Integrates with
 
 - **[`roundly-consulting/enums-for-laravel`](https://github.com/roundly-consulting/enums-for-laravel)**
