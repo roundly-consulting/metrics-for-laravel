@@ -14,6 +14,7 @@ use RoundlyConsulting\Metrics\Exceptions\InvalidConfigurationException;
 use RoundlyConsulting\Metrics\Exceptions\MissingTrendQueryExpressionException;
 use RoundlyConsulting\Metrics\Ranges\Custom;
 use RoundlyConsulting\Metrics\Ranges\Range;
+use RoundlyConsulting\Metrics\Support\MetricsConfig;
 use RoundlyConsulting\Metrics\Support\RawExpression;
 use RoundlyConsulting\Metrics\Support\Timezones;
 use RoundlyConsulting\Metrics\Traits\Unit;
@@ -34,8 +35,9 @@ trait ComputesTrend
     {
         parent::applyConfiguredDefaults();
 
-        // Unset keeps the trend's own unit; an unknown one throws instead of being ignored.
-        if (config('metrics.default_unit') !== null) {
+        // Not set (absent, null or blank) keeps the trend's own unit; an unknown one throws
+        // instead of being ignored.
+        if (! MetricsConfig::isUnset(config('metrics.default_unit'))) {
             $this->unit = Config::using(InvalidConfigurationException::class)
                 ->enum('metrics.default_unit', UnitEnum::class);
         }

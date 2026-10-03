@@ -14,6 +14,7 @@ use RoundlyConsulting\Metrics\Enums\Period;
 use RoundlyConsulting\Metrics\Events\MetricCalculated;
 use RoundlyConsulting\Metrics\Exceptions\InvalidConfigurationException;
 use RoundlyConsulting\Metrics\Exceptions\UnexpectedResultException;
+use RoundlyConsulting\Metrics\Support\MetricsConfig;
 use RoundlyConsulting\Metrics\Support\ResultCache;
 use RoundlyConsulting\Metrics\Traits\Description;
 use RoundlyConsulting\Metrics\Traits\Humanize;
@@ -82,17 +83,16 @@ abstract class Metric implements Arrayable, Responsable
 
     protected function applyConfiguredDefaults(): void
     {
-        // Unset keeps the metric's own default; anything else must be valid — an unknown
-        // range or a non-integer precision throws instead of being silently ignored.
-        if (config('metrics.default_range') !== null) {
+        // Not set (absent, null or blank) keeps the metric's own default; anything else must
+        // be valid — an unknown range or a non-integer precision throws instead of being
+        // silently ignored.
+        if (! MetricsConfig::isUnset(config('metrics.default_range'))) {
             $this->range = Config::using(InvalidConfigurationException::class)
                 ->enum('metrics.default_range', Period::class)->value;
         }
 
-        if (config('metrics.precision') !== null) {
-            $this->roundingPrecision = Config::using(InvalidConfigurationException::class)
-                ->integer('metrics.precision', $this->roundingPrecision);
-        }
+        $this->roundingPrecision = Config::using(InvalidConfigurationException::class)
+            ->integer('metrics.precision', $this->roundingPrecision);
     }
 
     protected function setup(): void
