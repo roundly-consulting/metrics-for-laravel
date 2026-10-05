@@ -3,6 +3,8 @@
 declare(strict_types=1);
 
 use Carbon\CarbonImmutable;
+use RoundlyConsulting\Metrics\Enums\Period;
+use RoundlyConsulting\Metrics\Facades\Metrics;
 use RoundlyConsulting\Metrics\Ranges\Custom;
 use RoundlyConsulting\Metrics\Ranges\LastQuarter;
 use RoundlyConsulting\Metrics\Ranges\QuarterToDate;
@@ -10,6 +12,7 @@ use RoundlyConsulting\Metrics\Ranges\Range;
 use RoundlyConsulting\Metrics\Ranges\ThisQuarter;
 use RoundlyConsulting\Metrics\Ranges\YearToDate;
 use RoundlyConsulting\Metrics\Tests\Metrics\Value\Users;
+use RoundlyConsulting\Metrics\Tests\Models\User;
 
 function formatRange(Range $range): string
 {
@@ -59,8 +62,35 @@ it('resolves the previous period of a custom range exactly', function (string $s
     'one day' => ['2026-01-02 00:00:00', '2026-01-02 23:59:59', '2026-01-01 00:00:00 .. 2026-01-01 23:59:59'],
     'one month' => ['2026-01-01 00:00:00', '2026-01-31 23:59:59', '2025-12-01 00:00:00 .. 2025-12-31 23:59:59'],
     'twelve hours' => ['2026-01-02 06:00:00', '2026-01-02 17:59:59', '2026-01-01 18:00:00 .. 2026-01-02 05:59:59'],
-    'inclusive midnight end' => ['2024-01-01 00:00:00', '2024-01-02 00:00:00', '2023-12-30 23:59:59 .. 2023-12-31 23:59:59'],
+    // An end with an explicit time is taken as given, midnight included.
+    'explicit midnight end' => ['2024-01-01 00:00:00', '2024-01-02 00:00:00', '2023-12-30 23:59:59 .. 2023-12-31 23:59:59'],
+    // A date-only end is the end of that day, so the previous period lines up on whole days.
+    'date-only month' => ['2026-01-01', '2026-01-31', '2025-12-01 00:00:00 .. 2025-12-31 23:59:59'],
+    'date-only day' => ['2026-01-02', '2026-01-02', '2026-01-01 00:00:00 .. 2026-01-01 23:59:59'],
 ]);
+
+it('regression: ends a custom range with a date-only end at the end of that day', function (string $end, string $expected): void {
+    expect(formatRange(new Custom('2026-01-01', $end)))->toBe($expected);
+})->with([
+    'date only' => ['2026-01-31', '2026-01-01 00:00:00 .. 2026-01-31 23:59:59'],
+    'date only, another format' => ['31.01.2026', '2026-01-01 00:00:00 .. 2026-01-31 23:59:59'],
+    'explicit midnight' => ['2026-01-31 00:00:00', '2026-01-01 00:00:00 .. 2026-01-31 00:00:00'],
+    'explicit time' => ['2026-01-31 12:30:00', '2026-01-01 00:00:00 .. 2026-01-31 12:30:00'],
+]);
+
+it('regression: counts the rows of the last day of a date-only custom range', function (): void {
+    createUsersForMetricsTesting([
+        ['balance' => 1, 'created_at' => '2023-01-15 12:00:00'],
+        ['balance' => 1, 'created_at' => '2023-01-31 12:00:00'],
+        ['balance' => 1, 'created_at' => '2023-02-01 00:00:00'],
+    ]);
+
+    $trends = Metrics::trend()->count(User::query(), 'id')->range(Period::Custom, '2023-01-01', '2023-01-31')->result()->trends();
+
+    expect(Users::make()->range(Period::Custom, '2023-01-01', '2023-01-31')->result()->value())->toBe(2.0)
+        ->and($trends['2023-01-31'])->toBe(1.0)
+        ->and($trends)->not->toHaveKey('2023-02-01');
+});
 
 it('keeps a custom previous period on the wall clock across a daylight-saving change', function (): void {
     config()->set('metrics.timezone', 'Europe/Bratislava');
