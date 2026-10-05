@@ -80,9 +80,10 @@ final class ProgressResult extends ValueResult
             'avoid' => $this->avoid,
             'change' => [
                 'percentage' => $this->change,
-                'is_increase' => $this->value > $this->previous,
-                'progress' => $this->progress - $this->previousProgress,
-                'value' => $this->value - $this->previous,
+                // Null without a comparison, rather than the current numbers echoed back.
+                'is_increase' => $this->previous === null ? null : $this->isIncrease(),
+                'progress' => $this->previousProgress === null ? null : $this->progress - $this->previousProgress,
+                'value' => $this->previous === null ? null : $this->value - $this->previous,
             ],
         ];
     }

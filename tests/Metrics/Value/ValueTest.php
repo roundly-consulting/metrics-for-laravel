@@ -59,7 +59,7 @@ it('returns metrics for total users', function () {
                 'previous' => null,
                 'change' => [
                     'percentage' => null,
-                    'is_increase' => true,
+                    'is_increase' => null,
                 ],
             ],
         ]);
@@ -461,7 +461,7 @@ it('returns average users balance', function () {
             'previous' => null,
             'change' => [
                 'percentage' => null,
-                'is_increase' => true,
+                'is_increase' => null,
             ],
         ]);
 });
@@ -485,7 +485,7 @@ it('returns sum of users balance', function () {
             'previous' => null,
             'change' => [
                 'percentage' => null,
-                'is_increase' => true,
+                'is_increase' => null,
             ],
         ]);
 });
@@ -509,7 +509,7 @@ it('returns max of users balance', function () {
             'previous' => null,
             'change' => [
                 'percentage' => null,
-                'is_increase' => true,
+                'is_increase' => null,
             ],
         ]);
 });
@@ -533,7 +533,7 @@ it('returns min of users balance', function () {
             'previous' => null,
             'change' => [
                 'percentage' => null,
-                'is_increase' => true,
+                'is_increase' => null,
             ],
         ]);
 });

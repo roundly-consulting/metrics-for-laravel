@@ -52,9 +52,12 @@ class ValueResult implements Result
         return $this->change;
     }
 
+    /**
+     * Whether the value rose against the previous one — false when there is no comparison.
+     */
     public function isIncrease(): bool
     {
-        return $this->value > $this->previous;
+        return $this->previous !== null && $this->value > $this->previous;
     }
 
     /**
@@ -67,7 +70,8 @@ class ValueResult implements Result
             'previous' => $this->previous,
             'change' => [
                 'percentage' => $this->change,
-                'is_increase' => $this->value > $this->previous,
+                // Null without a comparison: comparing a number with null compares booleans.
+                'is_increase' => $this->previous === null ? null : $this->isIncrease(),
             ],
         ];
     }

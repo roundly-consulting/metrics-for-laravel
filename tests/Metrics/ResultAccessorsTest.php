@@ -51,3 +51,28 @@ it('exposes typed accessors on a partition result', function (): void {
         ->and($result->labels())->toBe(['admin', 'user'])
         ->and($result->values())->toBe([3.0, 2.0]);
 });
+
+it('regression: leaves the change of a value result empty without a comparison', function (float $value): void {
+    $result = new ValueResult($value);
+
+    expect($result->toArray()['change'])->toBe(['percentage' => null, 'is_increase' => null])
+        ->and($result->isIncrease())->toBeFalse()
+        ->and(ValueResult::fromArray($result->toArray())->toArray())->toBe($result->toArray());
+})->with([-5.0, 0.0, 5.0]);
+
+it('regression: leaves the change of a progress result empty without a comparison', function (): void {
+    $result = new ProgressResult(value: -2.0, target: 5.0, progress: -40.0, avoid: false);
+
+    expect($result->toArray()['change'])->toBe(['percentage' => null, 'is_increase' => null, 'progress' => null, 'value' => null])
+        ->and($result->isIncrease())->toBeFalse()
+        ->and(ProgressResult::fromArray($result->toArray())->toArray())->toBe($result->toArray());
+});
+
+it('fills the change of a result with a comparison, a fall included', function (): void {
+    $value = new ValueResult(value: -5.0, previous: 5.0, change: -200.0);
+    $progress = new ProgressResult(value: 2.0, target: 4.0, progress: 50.0, avoid: false, previous: 3.0, previousProgress: 75.0, change: -33.0);
+
+    expect($value->toArray()['change'])->toBe(['percentage' => -200.0, 'is_increase' => false])
+        ->and($value->isIncrease())->toBeFalse()
+        ->and($progress->toArray()['change'])->toBe(['percentage' => -33.0, 'is_increase' => false, 'progress' => -25.0, 'value' => -1.0]);
+});

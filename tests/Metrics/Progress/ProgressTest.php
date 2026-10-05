@@ -20,9 +20,9 @@ it('returns progress metrics for total users', function () {
             'avoid' => false,
             'change' => [
                 'percentage' => null,
-                'is_increase' => true,
-                'progress' => 40.0,
-                'value' => 2.0,
+                'is_increase' => null,
+                'progress' => null,
+                'value' => null,
             ],
         ]);
 });
@@ -100,9 +100,9 @@ it('returns 100% progress when no target is set and value is greater than 0', fu
             'avoid' => false,
             'change' => [
                 'percentage' => null,
-                'is_increase' => true,
-                'progress' => 100.0,
-                'value' => 1.0,
+                'is_increase' => null,
+                'progress' => null,
+                'value' => null,
             ],
         ]);
 });
@@ -121,9 +121,9 @@ it('returns 0% progress when no target is set and value is 0', function () {
             'avoid' => false,
             'change' => [
                 'percentage' => null,
-                'is_increase' => false,
-                'progress' => 0.0,
-                'value' => 0.0,
+                'is_increase' => null,
+                'progress' => null,
+                'value' => null,
             ],
         ]);
 });
