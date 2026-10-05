@@ -25,6 +25,7 @@ use stdClass;
 
 trait ComputesTrend
 {
+    use RollsUpGroups;
     use Unit;
 
     protected bool $gapFilling = true;
@@ -204,13 +205,26 @@ trait ComputesTrend
 
         $rows = $this->aggregateSeries($query, $function, $column, (string) $this->seriesColumn, $dateColumn);
 
-        /** @var array<string, array<string, float>> $bySeries */
-        $bySeries = [];
+        /** @var array<string, array<string, stdClass>> $cells */
+        $cells = [];
 
         foreach ($rows as $row) {
-            $seriesKey = (string) $row['aggregate_series'];
-            $bySeries[$seriesKey][(string) $row['aggregate_date']] = (float) $row['aggregate'];
+            $seriesKey = (string) $this->groupKey($row['aggregate_series']);
+            $date = (string) $row['aggregate_date'];
+            $cell = (object) $row;
+
+            // NULL and '' are two series to the database but one key here: merge their
+            // buckets rather than let the second overwrite the first.
+            $cells[$seriesKey][$date] = isset($cells[$seriesKey][$date])
+                ? $this->mergeGroups($function, $cells[$seriesKey][$date], $cell)
+                : $cell;
         }
+
+        /** @var array<string, array<string, float>> $bySeries */
+        $bySeries = array_map(
+            fn (array $buckets): array => array_map(fn (stdClass $cell): float => (float) $cell->aggregate, $buckets),
+            $cells,
+        );
 
         $range = $this->seriesRange($rows);
 
@@ -266,12 +280,20 @@ trait ComputesTrend
 
         $expression = $this->bucketExpression($query, $dateColumn);
 
+        $columns = [
+            new RawExpression("{$function}({$column}) as aggregate"),
+            new RawExpression("{$expression} as aggregate_date"),
+            new RawExpression("{$series} as aggregate_series"),
+        ];
+
+        // What a merged average is weighted by (see toSeriesResult()).
+        if ($function === 'avg') {
+            $columns[] = new RawExpression("sum({$column}) as aggregate_sum");
+            $columns[] = new RawExpression("count({$column}) as aggregate_count");
+        }
+
         return $this->scopedBase($query)
-            ->select([
-                new RawExpression("{$function}({$column}) as aggregate"),
-                new RawExpression("{$expression} as aggregate_date"),
-                new RawExpression("{$series} as aggregate_series"),
-            ])
+            ->select($columns)
             ->when($this->range !== 'ALL', fn (QueryBuilder $query) => $query->whereBetween(
                 column: $dateColumn,
                 values: $this->storageBounds($this->getRange()),

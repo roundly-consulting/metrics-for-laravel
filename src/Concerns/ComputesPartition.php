@@ -14,6 +14,8 @@ use stdClass;
 
 trait ComputesPartition
 {
+    use RollsUpGroups;
+
     protected ?int $partitionLimit = null;
 
     protected ?string $otherLabel = null;
@@ -132,40 +134,6 @@ trait ComputesPartition
     }
 
     /**
-     * @param  array<array-key, stdClass>  $groups
-     */
-    protected function rollUp(string $function, array $groups): float
-    {
-        $values = array_values(array_filter(
-            array_map(fn (stdClass $group): ?float => is_numeric($group->aggregate) ? (float) $group->aggregate : null, $groups),
-            fn (?float $value): bool => $value !== null,
-        ));
-
-        return match ($function) {
-            'max' => $values === [] ? 0.0 : max($values),
-            'min' => $values === [] ? 0.0 : min($values),
-            'avg' => $this->weightedAverage($groups),
-            default => array_sum($values),
-        };
-    }
-
-    /**
-     * @param  array<array-key, stdClass>  $groups
-     */
-    protected function weightedAverage(array $groups): float
-    {
-        $sum = 0.0;
-        $count = 0.0;
-
-        foreach ($groups as $group) {
-            $sum += is_numeric($group->aggregate_sum ?? null) ? (float) $group->aggregate_sum : 0.0;
-            $count += is_numeric($group->aggregate_count ?? null) ? (float) $group->aggregate_count : 0.0;
-        }
-
-        return $count > 0 ? $sum / $count : 0.0;
-    }
-
-    /**
      * @param  array<array-key, float>  $values
      * @return array<array-key, float>
      */
@@ -253,11 +221,27 @@ trait ComputesPartition
         }
 
         $groups = [];
+        $merged = false;
 
         foreach ($results->get() as $row) {
             /** @var stdClass $row */
-            $key = $row->aggregate_partition;
-            $groups[is_int($key) || is_string($key) ? $key : (string) (is_scalar($key) ? $key : '')] = $row;
+            $key = $this->groupKey($row->aggregate_partition);
+
+            // NULL and '' are two groups to the database but one key here: merge them
+            // rather than let the second overwrite the first.
+            if (array_key_exists($key, $groups)) {
+                $groups[$key] = $this->mergeGroups($function, $groups[$key], $row);
+                $merged = true;
+
+                continue;
+            }
+
+            $groups[$key] = $row;
+        }
+
+        // A merged group can outgrow the groups ranked above it.
+        if ($merged) {
+            uasort($groups, fn (stdClass $a, stdClass $b): int => (float) $b->aggregate <=> (float) $a->aggregate);
         }
 
         return $groups;

@@ -99,3 +99,20 @@ it('fills a grouped trend\'s totals over a bounded range with no rows, like the 
         ->and(array_sum($grouped->trends()))->toBe(0.0)
         ->and($grouped->trends())->toBe(Metrics::trend()->count(User::query(), 'id')->range('7')->result()->trends());
 });
+
+it('regression: merges the NULL and empty-string series instead of dropping rows', function (string $method, float $value): void {
+    createUsersForMetricsTesting([
+        ['plan' => null, 'balance' => 10, 'created_at' => '2023-03-10 09:00:00'],
+        ['plan' => null, 'balance' => 20, 'created_at' => '2023-03-10 09:10:00'],
+        ['plan' => '', 'balance' => 60, 'created_at' => '2023-03-10 09:20:00'],
+    ]);
+
+    expect(Metrics::trend()->{$method}(User::query(), 'balance')->groupBy('plan')->range('TODAY')->result()->series())
+        ->toBe(['' => ['2023-03-10' => $value]]);
+})->with([
+    'count' => ['count', 3.0],
+    'sum' => ['sum', 90.0],
+    'average' => ['average', 30.0],
+    'max' => ['max', 60.0],
+    'min' => ['min', 10.0],
+]);
