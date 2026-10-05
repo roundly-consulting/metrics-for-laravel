@@ -6,6 +6,47 @@ All notable changes to `metrics-for-laravel` are documented in this file. The fo
 
 ## Unreleased
 
+### Fixed
+
+- The result cache key of a class-based metric now includes the state its class declares —
+  constructor arguments and other properties (a model as its class and key, a query as its
+  SQL and bindings, an enum as its value, a service as its class). Two instances built for two
+  tenants or two columns no longer share one cached result. A metric holding a closure is
+  calculated without the cache. Override `cacheIdentity()` for state read from `auth()` or
+  the request.
+- Trends and partitions drop the caller's `ORDER BY` from their grouped SQL: a partition's
+  top N is ranked by its aggregate again, trend buckets come back in date order, and an
+  ordered query (`latest()`) no longer fails the `GROUP BY` on PostgreSQL and MySQL.
+- A trend's date column is quoted in the bucket SQL, so a camelCase or reserved-word column
+  (`occurredAt`, `order`) works on every range and timezone. A custom `QueryExpression` now
+  receives the quoted column.
+- **Contract change:** a grouped trend's `trends` is the ungrouped trend over the same range —
+  the metric's own aggregate over every row, rounded once — instead of the sum of the series.
+  Averages, minimums and maximums change, sums and counts change where rounding differed,
+  and a grouped trend over a range with no rows now returns the zero-filled buckets.
+- **Contract change:** a NULL group and an empty-string group (and PostgreSQL's `false`) no
+  longer overwrite each other in partitions and trend series: colliding groups are merged with
+  the metric's aggregate, so no row is dropped. A boolean group is keyed `0` / `1` on every
+  database (PostgreSQL's `false` used to be `''`).
+- **Contract change:** a custom range whose end is a bare date (`2026-01-31`) now ends at the
+  end of that day, and its previous period lines up on whole days. An end with a time is
+  unchanged.
+- `Metrics::fake()` stands a canned value in with the registered metric's name, description,
+  prefix, suffix and formatter, and accepts that metric's fluent calls
+  (`withChangeAgainstPreviousPeriod()`, …) as no-ops. A method the metric doesn't have throws
+  `BadMethodCallException`.
+- **Contract change:** the percentage change is measured against the size of the previous
+  value, so from -100 to -50 is +50% (it was -50%). From zero, a fall is -100% (it was 0%).
+- **Contract change (JSON):** without a comparison, `change.is_increase` — and on a progress
+  metric `change.progress` and `change.value` — are `null` instead of a comparison with
+  nothing. `isIncrease()` returns `false` without a comparison.
+- `cacheFor(DateTimeInterface)` keeps the moment and resolves it when the entry is written, so
+  a registered template stops caching at that moment instead of a fixed number of seconds
+  after its first read.
+- **Contract change (JSON):** a metric's or dashboard's JSON response always encodes `trends`,
+  `series`, `partitions`, `labels` and `formatted` as objects. A map keyed `0`, `1`, … used to
+  encode as an array. `toArray()` is unchanged.
+
 ## 1.0.0 - 2026-10-03
 
 Initial public release.
