@@ -174,3 +174,35 @@ it('skips the cache for a metric holding state with no stable identity', functio
     expect(ScopedUsers::make(null, [fn (): int => 1])->result()->value())->toBe(2.0)
         ->and(ScopedUsers::make(null, fn (): int => 1)->result()->value())->toBe(2.0);
 });
+
+it('regression: a registered template cached until a moment stops caching once the moment has passed', function (): void {
+    Metrics::register('tpl', Users::make()->cacheFor(now()->addHour()));
+
+    createUsersForMetricsTesting([1]);
+    Carbon::setTestNow(now()->addHours(2));
+
+    expect(Metrics::get('tpl')->result()->value())->toBe(1.0);
+
+    createUsersForMetricsTesting([1]);
+    Carbon::setTestNow(now()->addMinutes(10));
+
+    expect(Metrics::get('tpl')->result()->value())->toBe(2.0);
+});
+
+it('regression: a registered template cached until a moment expires at that moment, not a full ttl after the first read', function (): void {
+    Metrics::register('tpl', Users::make()->cacheFor(now()->addHour()));
+
+    createUsersForMetricsTesting([1]);
+    Carbon::setTestNow(now()->addMinutes(30));
+
+    expect(Metrics::get('tpl')->result()->value())->toBe(1.0);
+
+    createUsersForMetricsTesting([1]);
+    Carbon::setTestNow(now()->addMinutes(15));
+
+    expect(Metrics::get('tpl')->result()->value())->toBe(1.0);
+
+    Carbon::setTestNow(now()->addMinutes(20));
+
+    expect(Metrics::get('tpl')->result()->value())->toBe(2.0);
+});

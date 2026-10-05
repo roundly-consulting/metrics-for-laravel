@@ -5,8 +5,8 @@ declare(strict_types=1);
 namespace RoundlyConsulting\Metrics\Concerns;
 
 use BackedEnum;
-use Carbon\CarbonImmutable;
 use Closure;
+use DateTimeImmutable;
 use DateTimeInterface;
 use Illuminate\Contracts\Cache\Repository;
 use Illuminate\Database\Eloquent\Builder;
@@ -23,7 +23,12 @@ trait Cacheable
 {
     private ?bool $shouldCache = null;
 
-    private ?int $cacheTtl = null;
+    /**
+     * Seconds, or the moment the entry expires — kept as a moment and only turned into a
+     * lifetime when the entry is written, since a registered instance is a template that
+     * may be resolved long after `cacheFor()` was called.
+     */
+    private DateTimeInterface|int|null $cacheTtl = null;
 
     private ?string $customCacheKey = null;
 
@@ -48,9 +53,7 @@ trait Cacheable
     {
         $this->shouldCache = true;
 
-        $this->cacheTtl = $ttl instanceof DateTimeInterface
-            ? max(0, (int) round((float) CarbonImmutable::now()->diffInSeconds($ttl, false)))
-            : $ttl;
+        $this->cacheTtl = $ttl instanceof DateTimeInterface ? DateTimeImmutable::createFromInterface($ttl) : $ttl;
 
         return $this;
     }
@@ -89,12 +92,13 @@ trait Cacheable
     }
 
     /**
-     * The per-metric TTL, else `metrics.cache.ttl` in seconds — accepted as an int
-     * or as the digit string `.env` produces (`METRICS_CACHE_TTL=600`), between one
-     * second and one year. A present but unusable value throws rather than
-     * silently falling back to the default.
+     * The per-metric TTL — seconds, or the moment set by `cacheFor()`, which the cache
+     * resolves as it writes the entry (a moment already past stores nothing) — else
+     * `metrics.cache.ttl` in seconds, accepted as an int or as the digit string `.env`
+     * produces (`METRICS_CACHE_TTL=600`), between one second and one year. A present but
+     * unusable value throws rather than silently falling back to the default.
      */
-    protected function resolveCacheTtl(): int
+    protected function resolveCacheTtl(): DateTimeInterface|int
     {
         if ($this->cacheTtl !== null) {
             return $this->cacheTtl;
