@@ -4,6 +4,9 @@ declare(strict_types=1);
 
 namespace RoundlyConsulting\Metrics\Types\Fake;
 
+use BadMethodCallException;
+use ReflectionMethod;
+use ReflectionProperty;
 use RoundlyConsulting\Metrics\Metric;
 use RoundlyConsulting\Metrics\Testing\MetricsFake;
 use RoundlyConsulting\Metrics\Types\Result;
@@ -18,6 +21,13 @@ use RoundlyConsulting\Metrics\Types\Value\ValueResult;
 final class FakeMetric extends Metric
 {
     private readonly Result $result;
+
+    /**
+     * The class of the registered metric this fake stands in for, when there is one.
+     *
+     * @var class-string<Metric>|null
+     */
+    private ?string $standsInFor = null;
 
     public function __construct(?Result $result = null)
     {
@@ -55,6 +65,47 @@ final class FakeMetric extends Metric
         }
 
         return new self(new FakeResult(['value' => $value]));
+    }
+
+    /**
+     * Take on the presentation of the registered metric this fake replaces — its name,
+     * description, prefix, suffix and formatter — so a dashboard shows it as it would show
+     * the real one, and accept that metric's fluent calls.
+     */
+    public function standingInFor(Metric $metric): self
+    {
+        $this->standsInFor = $metric::class;
+
+        $this->name = filled($metric->name) ? $metric->name : $metric->humanize(class_basename($metric));
+        $this->description = $metric->description;
+        $this->prefix = $metric->prefix;
+        $this->suffix = $metric->suffix;
+
+        // The formatter is private to Metric.
+        $formatter = new ReflectionProperty(Metric::class, 'formatter');
+        $formatter->setValue($this, $formatter->getValue($metric));
+
+        return $this;
+    }
+
+    /**
+     * A public method of the registered metric — `withChangeAgainstPreviousPeriod()`,
+     * `groupBy()`, `limit()`, … — is a no-op on its canned stand-in, so code under test
+     * configures it as it would the real metric. Anything else throws, as it would there.
+     *
+     * @param  array<array-key, mixed>  $arguments
+     *
+     * @throws BadMethodCallException
+     */
+    public function __call(string $method, array $arguments): static
+    {
+        if ($this->standsInFor !== null
+            && method_exists($this->standsInFor, $method)
+            && (new ReflectionMethod($this->standsInFor, $method))->isPublic()) {
+            return $this;
+        }
+
+        throw new BadMethodCallException(sprintf('Call to undefined method %s::%s()', $this->standsInFor ?? self::class, $method));
     }
 
     protected function calculate(): Result

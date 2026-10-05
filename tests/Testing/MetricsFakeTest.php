@@ -234,3 +234,68 @@ it('never caches a canned metric instance either', function (): void {
     expect($first)->toBe(1.0)
         ->and(Metrics::get('users')->result()->value())->toBe(2.0);
 });
+
+it('regression: a canned value keeps the registered metric\'s presentation and fluent api', function (): void {
+    Metrics::register('signups', fn () => Metrics::value()->count(User::query())
+        ->name('Sign-ups')
+        ->description('New accounts')
+        ->prefix('#')
+        ->suffix(' users')
+        ->formatUsing(fn (float $value): string => number_format($value, 1)));
+
+    Metrics::fake(['signups' => 42]);
+
+    $envelope = Metrics::get('signups')->toArray();
+
+    expect($envelope['name'])->toBe('Sign-ups')
+        ->and($envelope['description'])->toBe('New accounts')
+        ->and($envelope['prefix'])->toBe('#')
+        ->and($envelope['suffix'])->toBe(' users')
+        ->and($envelope['result']['formatted'])->toBe('42.0')
+        ->and(Metrics::get('signups')->withChangeAgainstPreviousPeriod()->compareTo('YESTERDAY')->toArray()['result']['value'])->toBe(42.0)
+        ->and(Metrics::dashboard(['signups'])->toArray()['signups']['name'])->toBe('Sign-ups');
+});
+
+it('names a canned class-based metric after its class, as the real one is', function (): void {
+    Metrics::register('users', Users::class);
+
+    Metrics::fake(['users' => ['value' => 5.0, 'extra' => true]]);
+
+    expect(Metrics::get('users')->toArray())
+        ->name->toBe('Users')
+        ->result->toBe(['value' => 5.0, 'extra' => true]);
+});
+
+it('refuses a method the registered metric does not have', function (): void {
+    Metrics::register('signups', fn () => Metrics::value()->count(User::query()));
+
+    Metrics::fake(['signups' => 42]);
+
+    Metrics::get('signups')->groupBy('type');
+})->throws(BadMethodCallException::class, 'groupBy()');
+
+it('refuses a method the registered metric has but does not expose', function (): void {
+    Metrics::register('users', Users::class);
+
+    Metrics::fake(['users' => 42]);
+
+    Metrics::get('users')->calculate();
+})->throws(BadMethodCallException::class, 'calculate()');
+
+it('refuses any unknown method on a canned key that was never registered', function (): void {
+    Metrics::fake(['signups' => 42]);
+
+    expect(Metrics::get('signups')->toArray()['name'])->toBe('Fake Metric');
+
+    Metrics::get('signups')->withChangeAgainstPreviousPeriod();
+})->throws(BadMethodCallException::class, 'withChangeAgainstPreviousPeriod()');
+
+it('still answers a canned value when the registered metric cannot be built in the test', function (): void {
+    Metrics::register('broken', fn (): Users => throw new RuntimeException('no tenant bound'));
+
+    Metrics::fake(['broken' => 7]);
+
+    expect(Metrics::get('broken')->toArray())
+        ->name->toBe('Fake Metric')
+        ->result->value->toBe(7.0);
+});

@@ -11,6 +11,7 @@ use RoundlyConsulting\Metrics\Facades\Metrics;
 use RoundlyConsulting\Metrics\Metric;
 use RoundlyConsulting\Metrics\MetricsManager;
 use RoundlyConsulting\Metrics\Types\Fake\FakeMetric;
+use Throwable;
 
 /**
  * A recording {@see MetricsManager} for host-app tests, installed by
@@ -56,7 +57,9 @@ final class MetricsFake extends MetricsManager
         $this->resolved[$key] = ($this->resolved[$key] ?? 0) + 1;
 
         if (array_key_exists($key, $this->canned)) {
-            return (clone $this->canned[$key])->withKey($key);
+            $canned = (clone $this->canned[$key])->withKey($key);
+
+            return $canned instanceof FakeMetric ? $this->standIn($key, $canned) : $canned;
         }
 
         return parent::get($key);
@@ -169,6 +172,26 @@ final class MetricsFake extends MetricsManager
     public function assertCacheNotFlushed(): void
     {
         Assert::assertSame(0, $this->flushes, 'Expected the metric result cache not to be flushed, but it was.');
+    }
+
+    /**
+     * A canned stand-in dressed as the metric registered under its key. A registered metric
+     * the test cannot build (an unbound dependency) leaves it bare: the canned value is
+     * what the test asked for.
+     */
+    private function standIn(string $key, FakeMetric $fake): FakeMetric
+    {
+        if (! parent::has($key)) {
+            return $fake;
+        }
+
+        try {
+            $registered = parent::get($key);
+        } catch (Throwable) {
+            return $fake;
+        }
+
+        return $fake->standingInFor($registered);
     }
 
     /**
