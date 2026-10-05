@@ -9,6 +9,7 @@ use Illuminate\Contracts\Support\Responsable;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use RoundlyConsulting\Metrics\Enums\Period;
+use RoundlyConsulting\Metrics\Support\JsonEnvelope;
 
 /**
  * Resolves a group of registered metrics into a single keyed envelope, sharing
@@ -57,7 +58,7 @@ final class Dashboard implements Arrayable, Responsable
     }
 
     /**
-     * @return array<string, mixed>
+     * @return array<string, array<string, mixed>>
      */
     public function toArray(): array
     {
@@ -85,6 +86,7 @@ final class Dashboard implements Arrayable, Responsable
      */
     public function toResponse($request): JsonResponse
     {
-        return new JsonResponse($this->toArray());
+        // Each metric's keyed maps encode as JSON objects, as on a single metric's response.
+        return new JsonResponse(array_map(JsonEnvelope::of(...), $this->toArray()));
     }
 }

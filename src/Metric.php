@@ -14,6 +14,7 @@ use RoundlyConsulting\Metrics\Enums\Period;
 use RoundlyConsulting\Metrics\Events\MetricCalculated;
 use RoundlyConsulting\Metrics\Exceptions\InvalidConfigurationException;
 use RoundlyConsulting\Metrics\Exceptions\UnexpectedResultException;
+use RoundlyConsulting\Metrics\Support\JsonEnvelope;
 use RoundlyConsulting\Metrics\Support\MetricsConfig;
 use RoundlyConsulting\Metrics\Support\ResultCache;
 use RoundlyConsulting\Metrics\Traits\Description;
@@ -136,14 +137,14 @@ abstract class Metric implements Arrayable, Responsable
 
     /**
      * Return the metric's envelope as a JSON response so a controller can
-     * `return Metrics::get('x')` directly. Authorization stays the host app's
-     * responsibility.
+     * `return Metrics::get('x')` directly. Keyed maps always encode as JSON objects.
+     * Authorization stays the host app's responsibility.
      *
      * @param  Request  $request
      */
     public function toResponse($request): JsonResponse
     {
-        return new JsonResponse($this->toArray());
+        return new JsonResponse(JsonEnvelope::of($this->toArray()));
     }
 
     /**
