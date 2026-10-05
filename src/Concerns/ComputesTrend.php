@@ -308,19 +308,22 @@ trait ComputesTrend
     }
 
     /**
-     * The date column re-read on the reporting clock — unchanged when it is the storage
-     * clock. The shift is computed over the span the query can return: the range's bounds,
-     * or for `ALL` the stored column's own first and last value.
+     * The date column, quoted by the query grammar and re-read on the reporting clock —
+     * unchanged when it is the storage clock. The shift is computed over the span the query
+     * can return: the range's bounds, or for `ALL` the stored column's own first and last
+     * value.
      *
      * @param  Builder<covariant Model>  $query
      */
     protected function reportingDateColumn(QueryExpression $grammar, Builder $query, string $dateColumn): string
     {
+        $wrapped = $query->getQuery()->getGrammar()->wrap($dateColumn);
+
         $storage = Timezones::storage();
         $reporting = $this->reportingTimezone();
 
         if ($storage === $reporting) {
-            return $dateColumn;
+            return $wrapped;
         }
 
         $span = $this->range === 'ALL'
@@ -328,10 +331,10 @@ trait ComputesTrend
             : $this->storageBounds($this->getRange());
 
         if ($span === null) {
-            return $dateColumn;
+            return $wrapped;
         }
 
-        return Timezones::reportingColumn($grammar, $dateColumn, $storage, $reporting, $span[0], $span[1]);
+        return Timezones::reportingColumn($grammar, $wrapped, $storage, $reporting, $span[0], $span[1]);
     }
 
     /**

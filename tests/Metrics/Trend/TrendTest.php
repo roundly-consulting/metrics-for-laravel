@@ -2,6 +2,9 @@
 
 declare(strict_types=1);
 
+use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\Schema;
 use RoundlyConsulting\Metrics\Exceptions\InvalidRangeException;
 use RoundlyConsulting\Metrics\Exceptions\MissingTrendQueryExpressionException;
 use RoundlyConsulting\Metrics\Facades\Metrics;
@@ -264,3 +267,40 @@ it('regression: buckets an ordered query in ascending order', function (bool $gr
         expect($result->series())->toBe(['user' => ['2023-03-09' => 1.0, '2023-03-10' => 2.0]]);
     }
 })->with(['ungrouped' => [false], 'grouped' => [true]]);
+
+/**
+ * The date column used to reach the bucket SQL as written, so a name that needs quoting —
+ * the reserved word `order`, or camelCase that PostgreSQL folds to `occurredat` — broke
+ * the query on every path except the range filter. The span crosses the 2023-03-26
+ * daylight-saving change, so the Bratislava cases also cover the timezone CASE.
+ */
+it('regression: buckets a date column whose name needs quoting', function (string $dateColumn, ?string $timezone, string $range): void {
+    Schema::create('occurrences', function (Blueprint $table): void {
+        $table->id();
+        $table->timestamp('order')->nullable();
+        $table->timestamp('occurredAt')->nullable();
+    });
+
+    $model = new class extends Model
+    {
+        protected $table = 'occurrences';
+
+        public $timestamps = false;
+    };
+
+    $model->newQuery()->insert([
+        ['order' => '2023-03-10 09:00:00', 'occurredAt' => '2023-03-10 09:00:00'],
+        ['order' => '2023-04-01 09:00:00', 'occurredAt' => '2023-04-01 09:00:00'],
+    ]);
+
+    $trends = Metrics::trend()->count($model->newQuery(), 'id', $dateColumn)
+        ->range($range)
+        ->timezone($timezone)
+        ->result()
+        ->trends();
+
+    expect($trends['2023-03-10'])->toBe(1.0);
+})->with(['order', 'occurredAt'])->with([
+    'storage clock' => [null],
+    'reporting clock' => ['Europe/Bratislava'],
+])->with(['ALL', '7']);
