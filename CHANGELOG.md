@@ -6,6 +6,20 @@ All notable changes to `metrics-for-laravel` are documented in this file. The fo
 
 ## Unreleased
 
+## 1.1.0 - 2026-10-05
+
+This release fixes eleven bugs. Six of them change output you may rely on. They are marked
+**Contract change** below, so check those before upgrading.
+
+### Changed
+
+- Metric classes that override the protected cache hooks must match the new signatures:
+  `cacheIdentity(): ?array` (returning `null` skips the cache), `resolveCacheKey(): ?string`
+  and `resolveCacheTtl(): DateTimeInterface|int`. The trend helper `totalsAcrossSeries()` was
+  removed. `rollUp()` and `weightedAverage()` are still there.
+- Maintenance: `composer.json` `homepage` and `support.docs` now link to the documentation page.
+- Documentation: the README hero image uses an absolute URL, so it renders on Packagist.
+
 ### Fixed
 
 - The result cache key of a class-based metric now includes the state its class declares —
