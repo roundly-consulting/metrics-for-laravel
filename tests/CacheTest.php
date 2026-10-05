@@ -3,7 +3,10 @@
 declare(strict_types=1);
 
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\DB;
+use RoundlyConsulting\Metrics\Enums\Period;
 use RoundlyConsulting\Metrics\Facades\Metrics;
+use RoundlyConsulting\Metrics\Tests\Metrics\Value\ScopedUsers;
 use RoundlyConsulting\Metrics\Tests\Metrics\Value\Users;
 use RoundlyConsulting\Metrics\Tests\Models\User;
 
@@ -97,4 +100,77 @@ it('caches until a given datetime', function (): void {
     expect(
         Metrics::value()->count(User::query())->range('TODAY')->cacheFor(now()->addHour())->toArray()['result']['value']
     )->toBe(1.0);
+});
+
+it('regression: keeps two cached instances of one metric class with different constructor state apart', function (): void {
+    config()->set('metrics.cache.enabled', true);
+
+    createUsersForMetricsTesting([10, 20, 30]);
+
+    expect(Users::make('count')->result()->value())->toBe(3.0)
+        ->and(Users::make('sum', 'balance')->result()->value())->toBe(60.0);
+});
+
+it('regression: keeps the cached results of two tenant models apart', function (): void {
+    config()->set('metrics.cache.enabled', true);
+
+    createUsersForMetricsTesting([
+        ['balance' => 1, 'type' => 'admin'],
+        ['balance' => 1, 'type' => 'user'],
+        ['balance' => 1, 'type' => 'user'],
+    ]);
+
+    $admin = User::query()->where('type', 'admin')->firstOrFail();
+    $user = User::query()->where('type', 'user')->firstOrFail();
+
+    expect(ScopedUsers::make($admin)->result()->value())->toBe(1.0)
+        ->and(ScopedUsers::make($user)->result()->value())->toBe(2.0)
+        ->and(ScopedUsers::make($admin)->result()->value())->toBe(1.0);
+});
+
+it('keys a class-based metric by its state, so the same state is still served from the cache', function (mixed $state): void {
+    config()->set('metrics.cache.enabled', true);
+
+    createUsersForMetricsTesting([1]);
+
+    expect(ScopedUsers::make(null, $state)->result()->value())->toBe(1.0);
+
+    createUsersForMetricsTesting([1]);
+
+    expect(ScopedUsers::make(null, $state)->result()->value())->toBe(1.0)
+        ->and(ScopedUsers::make()->result()->value())->toBe(2.0);
+})->with([
+    'a string' => ['eu'],
+    'an enum' => [Period::Today],
+    'a moment' => [new DateTimeImmutable('2023-03-10 10:00:00')],
+    'an array of values' => [[1, 'two', [Period::Today]]],
+    'an eloquent query' => [fn () => User::query()->where('type', 'admin')],
+    'a query builder' => [fn () => DB::table('users')->where('type', 'admin')],
+    'an unsaved model' => [fn () => new User(['type' => 'admin'])],
+    'an injected service' => [new ArrayObject],
+]);
+
+it('keeps cached results apart when only an eloquent query in its state differs', function (): void {
+    config()->set('metrics.cache.enabled', true);
+
+    createUsersForMetricsTesting([1]);
+
+    expect(ScopedUsers::make(null, User::query()->where('type', 'admin'))->result()->value())->toBe(1.0);
+
+    createUsersForMetricsTesting([1]);
+
+    expect(ScopedUsers::make(null, User::query()->where('type', 'user'))->result()->value())->toBe(2.0);
+});
+
+it('skips the cache for a metric holding state with no stable identity', function (): void {
+    config()->set('metrics.cache.enabled', true);
+
+    createUsersForMetricsTesting([1]);
+
+    expect(ScopedUsers::make(null, fn (): int => 1)->result()->value())->toBe(1.0);
+
+    createUsersForMetricsTesting([1]);
+
+    expect(ScopedUsers::make(null, [fn (): int => 1])->result()->value())->toBe(2.0)
+        ->and(ScopedUsers::make(null, fn (): int => 1)->result()->value())->toBe(2.0);
 });

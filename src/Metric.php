@@ -171,7 +171,9 @@ abstract class Metric implements Arrayable, Responsable
     {
         $startedAt = hrtime(true);
 
-        if (! $this->cachingEnabled()) {
+        $cacheKey = $this->cachingEnabled() ? $this->resolveCacheKey() : null;
+
+        if ($cacheKey === null) {
             $result = $this->calculate();
 
             $this->dispatchCalculated($startedAt, fromCache: false);
@@ -180,7 +182,6 @@ abstract class Metric implements Arrayable, Responsable
         }
 
         $repository = $this->cacheRepository();
-        $cacheKey = $this->resolveCacheKey();
         $generation = ResultCache::generation(ResultCache::scopeFor($this));
 
         $cached = ResultCache::restore($repository->get($cacheKey), $generation);

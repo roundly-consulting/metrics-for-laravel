@@ -4,15 +4,20 @@ declare(strict_types=1);
 
 namespace RoundlyConsulting\Metrics\Concerns;
 
+use BackedEnum;
 use Carbon\CarbonImmutable;
+use Closure;
 use DateTimeInterface;
 use Illuminate\Contracts\Cache\Repository;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Query\Builder as QueryBuilder;
+use ReflectionClass;
 use RoundlyConsulting\Metrics\Exceptions\InvalidConfigurationException;
 use RoundlyConsulting\Metrics\Support\ResultCache;
 use RoundlyConsulting\Metrics\Support\Timezones;
 use RoundlyConsulting\PackageToolkit\Support\Config;
+use UnitEnum;
 
 trait Cacheable
 {
@@ -107,13 +112,20 @@ trait Cacheable
     /**
      * The custom key when one is set, else a key derived from everything that makes the
      * result unique: the class, the registry key, the range, the reporting and storage
-     * timezones, the precision and rounding mode, the ad-hoc builder's query
-     * ({@see cacheIdentity()}) and the type's options.
+     * timezones, the precision and rounding mode, what the metric computes
+     * ({@see cacheIdentity()}) and the type's options. Null when that has no stable
+     * identity: the metric is then calculated without the cache.
      */
-    protected function resolveCacheKey(): string
+    protected function resolveCacheKey(): ?string
     {
         if ($this->customCacheKey !== null) {
             return $this->customCacheKey;
+        }
+
+        $identity = $this->cacheIdentity();
+
+        if ($identity === null) {
+            return null;
         }
 
         $parts = array_merge(
@@ -128,7 +140,7 @@ trait Cacheable
                 'precision' => $this->roundingPrecision,
                 'rounding' => $this->roundingMode->name,
             ],
-            ['identity' => $this->cacheIdentity()],
+            ['identity' => $identity],
             $this->cacheDiscriminators(),
         );
 
@@ -136,14 +148,90 @@ trait Cacheable
     }
 
     /**
-     * What the metric computes, when its class alone does not say — an ad-hoc builder's
-     * query and aggregate. A metric class's `calculate()` is fixed by the class itself.
+     * What the metric computes, beyond its class: an ad-hoc builder's query and aggregate,
+     * or the state a metric class declares itself — its constructor arguments and other
+     * properties ({@see declaredState()}). Two instances of one class built for two tenants
+     * or two columns therefore never share an entry.
      *
-     * @return array<array-key, mixed>
+     * Override it when the result depends on state the metric reads while calculating —
+     * `auth()`, the request — rather than holding it in a property.
+     *
+     * @return array<array-key, mixed>|null null when the state has no stable identity
      */
-    protected function cacheIdentity(): array
+    protected function cacheIdentity(): ?array
     {
-        return [];
+        return $this->declaredState();
+    }
+
+    /**
+     * Every property declared by the classes between this metric and the package's base
+     * class it extends. A model counts as its class and key, a query as its SQL and
+     * bindings, an enum as its value and a moment as its instant; any other object (an
+     * injected service) as its class. Null when a value has no stable identity — a closure
+     * or a resource.
+     *
+     * @return array<string, mixed>|null
+     */
+    private function declaredState(): ?array
+    {
+        $state = [];
+        $stable = true;
+
+        for ($class = new ReflectionClass($this); $class !== false && ! self::isPackageClass($class); $class = $class->getParentClass()) {
+            foreach ($class->getProperties() as $property) {
+                if ($property->isStatic() || $property->getDeclaringClass()->getName() !== $class->getName()) {
+                    continue;
+                }
+
+                $state[$class->getName().'::'.$property->getName()] = $property->isInitialized($this)
+                    ? $this->stateIdentity($property->getValue($this), $stable)
+                    : null;
+            }
+        }
+
+        return $stable ? $state : null;
+    }
+
+    private function stateIdentity(mixed $value, bool &$stable): mixed
+    {
+        if ($value === null || is_scalar($value)) {
+            return $value;
+        }
+
+        if (is_array($value)) {
+            $identity = [];
+
+            foreach ($value as $key => $item) {
+                $identity[$key] = $this->stateIdentity($item, $stable);
+            }
+
+            return $identity;
+        }
+
+        if (! is_object($value) || $value instanceof Closure) {
+            $stable = false;
+
+            return null;
+        }
+
+        return match (true) {
+            $value instanceof UnitEnum => [$value::class, $value instanceof BackedEnum ? $value->value : $value->name],
+            $value instanceof DateTimeInterface => $value->format('Y-m-d H:i:s.u e'),
+            $value instanceof Model => [$value::class, $value->getConnectionName(), $value->getKey() ?? $this->stateIdentity($value->getAttributes(), $stable)],
+            $value instanceof Builder => $this->queryIdentity($value),
+            $value instanceof QueryBuilder => [$value->getConnection()->getDatabaseName(), $value->toSql(), $value->getBindings()],
+            default => $value::class,
+        };
+    }
+
+    /**
+     * Whether a class is one of the package's own — where the state walk stops.
+     *
+     * @param  ReflectionClass<object>  $class
+     */
+    private static function isPackageClass(ReflectionClass $class): bool
+    {
+        return str_starts_with((string) $class->getFileName(), dirname(__DIR__).DIRECTORY_SEPARATOR);
     }
 
     /**
