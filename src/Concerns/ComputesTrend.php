@@ -56,7 +56,8 @@ trait ComputesTrend
 
     /**
      * Split the trend by a dimension into multiple series over time, exposed
-     * under an additive "series" key alongside the combined "trends" totals.
+     * under an additive "series" key alongside the "trends" totals — the ungrouped
+     * trend, aggregated over every row.
      */
     public function groupBy(string $column): static
     {
@@ -223,7 +224,12 @@ trait ComputesTrend
             $series[$seriesKey] = $this->mergeRangeDatesWithAggregateResults($range, collect($buckets))->all();
         }
 
-        return new TrendResult(results: $this->totalsAcrossSeries($series), series: $series);
+        // The totals are the ungrouped trend over the same range — the metric's own aggregate
+        // over every row, rounded once. Adding up the series is only right for an unrounded
+        // sum or count; for an average, minimum or maximum it is a different number.
+        $totals = $this->mergeRangeDatesWithAggregateResults($range, $this->aggregate($query, $function, $column, $dateColumn));
+
+        return new TrendResult(results: $totals->all(), series: $series);
     }
 
     /**
@@ -245,25 +251,6 @@ trait ComputesTrend
             start: $this->fromUnitFormatToDatetime((string) $dates->first())->toDateTimeString(),
             end: $this->fromUnitFormatToDatetime((string) $dates->last(), true)->toDateTimeString(),
         ))->usingTimezone($this->timezoneOverride);
-    }
-
-    /**
-     * @param  array<string, array<string, float>>  $series
-     * @return array<string, float>
-     */
-    protected function totalsAcrossSeries(array $series): array
-    {
-        $totals = [];
-
-        foreach ($series as $buckets) {
-            foreach ($buckets as $date => $value) {
-                $totals[$date] = ($totals[$date] ?? 0.0) + $value;
-            }
-        }
-
-        ksort($totals);
-
-        return $totals;
     }
 
     /**

@@ -2,7 +2,9 @@
 
 declare(strict_types=1);
 
+use RoundlyConsulting\Metrics\Facades\Metrics;
 use RoundlyConsulting\Metrics\Tests\Metrics\Trend\Users;
+use RoundlyConsulting\Metrics\Tests\Models\User;
 
 it('splits a trend into series by a dimension', function (): void {
     createUsersForMetricsTesting([
@@ -57,4 +59,43 @@ it('returns an empty result when grouped with no rows', function (): void {
     $metrics = Users::make()->daily()->groupBy('type')->toArray();
 
     expect($metrics['result'])->toBe(['trends' => []]);
+});
+
+it('regression: totals a grouped trend with the metric\'s own aggregate, not the sum of its series', function (string $method, float $total): void {
+    createUsersForMetricsTesting([
+        ['type' => 'pro', 'balance' => 100, 'created_at' => '2023-03-10 09:00:00'],
+        ['type' => 'free', 'balance' => 300, 'created_at' => '2023-03-10 09:30:00'],
+    ]);
+
+    $result = Metrics::trend()->{$method}(User::query(), 'balance')->groupBy('type')->range('TODAY')->result();
+
+    expect($result->trends())->toBe(['2023-03-10' => $total])
+        ->and($result->trends())->toBe(Metrics::trend()->{$method}(User::query(), 'balance')->range('TODAY')->result()->trends());
+})->with([
+    'average' => ['average', 200.0],
+    'max' => ['max', 300.0],
+    'min' => ['min', 100.0],
+    'sum' => ['sum', 400.0],
+    'count' => ['count', 2.0],
+]);
+
+it('regression: rounds a grouped total once, after aggregating', function (): void {
+    createUsersForMetricsTesting([
+        ['type' => 'pro', 'balance' => 0.4, 'created_at' => '2023-03-10 09:00:00'],
+        ['type' => 'free', 'balance' => 0.4, 'created_at' => '2023-03-10 09:30:00'],
+    ]);
+
+    $result = Metrics::trend()->sum(User::query(), 'balance')->groupBy('type')->range('TODAY')->precision(0)->result();
+
+    expect($result->trends())->toBe(['2023-03-10' => 1.0])
+        ->and($result->series())->toBe(['free' => ['2023-03-10' => 0.0], 'pro' => ['2023-03-10' => 0.0]]);
+});
+
+it('fills a grouped trend\'s totals over a bounded range with no rows, like the ungrouped trend', function (): void {
+    $grouped = Metrics::trend()->count(User::query(), 'id')->groupBy('type')->range('7')->result();
+
+    expect($grouped->series())->toBe([])
+        ->and($grouped->trends())->toHaveCount(8)
+        ->and(array_sum($grouped->trends()))->toBe(0.0)
+        ->and($grouped->trends())->toBe(Metrics::trend()->count(User::query(), 'id')->range('7')->result()->trends());
 });
