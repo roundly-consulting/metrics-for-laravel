@@ -346,7 +346,6 @@ trait ComputesTrend
         $wrapped = $query->getQuery()->getGrammar()->wrap($dateColumn);
 
         $row = $this->scopedBase($query)
-            ->reorder()
             ->select([
                 new RawExpression("min({$wrapped}) as span_start"),
                 new RawExpression("max({$wrapped}) as span_end"),
@@ -364,7 +363,9 @@ trait ComputesTrend
 
     /**
      * A copy of the base query with the model's global scopes applied (e.g. soft deletes),
-     * so the raw aggregate/grouping SQL runs against the same constraints.
+     * so the raw aggregate/grouping SQL runs against the same constraints — without the
+     * caller's ORDER BY, which would sort the buckets and break the GROUP BY on PostgreSQL
+     * and MySQL's ONLY_FULL_GROUP_BY.
      *
      * Cloned first: `applyScopes()` hands back the builder itself when the model has no
      * global scopes, so the select/where/group added here would otherwise pile onto the
@@ -375,7 +376,7 @@ trait ComputesTrend
      */
     protected function scopedBase(Builder $query): QueryBuilder
     {
-        return (clone $query)->applyScopes()->getQuery();
+        return (clone $query)->applyScopes()->getQuery()->reorder();
     }
 
     /**

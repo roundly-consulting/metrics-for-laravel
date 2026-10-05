@@ -4,12 +4,14 @@ declare(strict_types=1);
 
 use RoundlyConsulting\Metrics\Exceptions\InvalidRangeException;
 use RoundlyConsulting\Metrics\Exceptions\MissingTrendQueryExpressionException;
+use RoundlyConsulting\Metrics\Facades\Metrics;
 use RoundlyConsulting\Metrics\Tests\Metrics\Trend\AverageUsersBalance;
 use RoundlyConsulting\Metrics\Tests\Metrics\Trend\MaxUsersBalanceHourly;
 use RoundlyConsulting\Metrics\Tests\Metrics\Trend\MinUsersBalanceMinutely;
 use RoundlyConsulting\Metrics\Tests\Metrics\Trend\Users;
 use RoundlyConsulting\Metrics\Tests\Metrics\Trend\UsersBalance;
 use RoundlyConsulting\Metrics\Tests\Metrics\Trend\UsersForMissingQueryExpression;
+use RoundlyConsulting\Metrics\Tests\Models\User;
 use RoundlyConsulting\Testing\Database\DriverMatrix;
 
 it('returns balance metrics for all users daily', function () {
@@ -240,3 +242,25 @@ it('throws MissingTrendQueryExpressionException exception when no driver has bee
             'Missing trend query expression for `'.DriverMatrix::driver().'` driver.',
         );
 });
+
+it('regression: buckets an ordered query in ascending order', function (bool $grouped): void {
+    createUsersForMetricsTesting([
+        ['balance' => 1, 'created_at' => '2023-03-09 10:00:00'],
+        ['balance' => 1, 'created_at' => '2023-03-10 09:00:00'],
+        ['balance' => 1, 'created_at' => '2023-03-10 09:30:00'],
+    ]);
+
+    $trend = Metrics::trend()->count(User::query()->latest(), 'id')->withoutGapFilling();
+
+    if ($grouped) {
+        $trend->groupBy('type');
+    }
+
+    $result = $trend->result();
+
+    expect($result->trends())->toBe(['2023-03-09' => 1.0, '2023-03-10' => 2.0]);
+
+    if ($grouped) {
+        expect($result->series())->toBe(['user' => ['2023-03-09' => 1.0, '2023-03-10' => 2.0]]);
+    }
+})->with(['ungrouped' => [false], 'grouped' => [true]]);

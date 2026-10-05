@@ -171,3 +171,13 @@ it('counts the rows of the NULL group', function (): void {
     expect(Metrics::partition()->count(User::query(), 'plan')->result()->partitions())
         ->toBe(['' => 2.0, 'pro' => 1.0]);
 });
+
+it('regression: ranks the top groups by their aggregate, not by the caller\'s order', function (): void {
+    createUsersForMetricsTesting([
+        ['plan' => 'free', 'type' => 'x'], ['plan' => 'free', 'type' => 'y'], ['plan' => 'free', 'type' => 'z'],
+        ['plan' => 'pro', 'type' => 'adam'],
+    ]);
+
+    expect(Metrics::partition()->count(User::query()->orderBy('type'), 'plan')->limit(1)->result()->partitions())
+        ->toBe(['free' => 3.0, 'Other' => 1.0]);
+});

@@ -241,7 +241,9 @@ trait ComputesPartition
         // aggregate/grouping SQL runs against the same constraints. Cloned first:
         // applyScopes() returns the builder itself when there are no global scopes, and the
         // SQL below would otherwise pile onto the metric's own query on every calculation.
+        // The caller's ORDER BY is dropped: it would rank the groups instead of the aggregate.
         $results = (clone $query)->applyScopes()->getQuery()
+            ->reorder()
             ->select($columns)
             ->groupBy('aggregate_partition')
             ->orderByDesc('aggregate');
