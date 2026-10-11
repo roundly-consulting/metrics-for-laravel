@@ -6,6 +6,11 @@ All notable changes to `metrics-for-laravel` are documented in this file. The fo
 
 ## Unreleased
 
+### Changed
+
+- Maintenance: requires the latest roundly packages — package-toolkit `^1.3.0`, enums `^1.1.0`;
+  dev: testing `^1.2.1`.
+
 ## 1.1.0 - 2026-10-05
 
 This release fixes eleven bugs. Six of them change output you may rely on. They are marked
