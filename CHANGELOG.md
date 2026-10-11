@@ -6,6 +6,8 @@ All notable changes to `metrics-for-laravel` are documented in this file. The fo
 
 ## Unreleased
 
+## 1.1.2 - 2026-10-11
+
 ### Fixed
 
 - Fluent setters return `static` instead of `self`. They live in traits on the abstract
