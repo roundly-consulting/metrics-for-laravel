@@ -24,7 +24,7 @@ trait AggregatesValues
 
     protected ?string $compareToEnd = null;
 
-    public function withChangeAgainstPreviousPeriod(bool $withChange = true): self
+    public function withChangeAgainstPreviousPeriod(bool $withChange = true): static
     {
         $this->withChange = $withChange;
 
@@ -35,7 +35,7 @@ trait AggregatesValues
      * Compare the current value against an arbitrary range instead of the
      * immediately-preceding period. Implies withChangeAgainstPreviousPeriod().
      */
-    public function compareTo(Period|string $range, ?string $customRangeStart = null, ?string $customRangeEnd = null): self
+    public function compareTo(Period|string $range, ?string $customRangeStart = null, ?string $customRangeEnd = null): static
     {
         $this->compareTo = $range instanceof Period ? $range->value : $range;
         $this->compareToStart = $customRangeStart;

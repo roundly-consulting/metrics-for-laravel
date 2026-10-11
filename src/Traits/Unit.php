@@ -11,7 +11,7 @@ trait Unit
 {
     protected UnitEnum $unit = UnitEnum::Day;
 
-    public function unit(UnitEnum|string $unit): self
+    public function unit(UnitEnum|string $unit): static
     {
         $resolved = $unit instanceof UnitEnum ? $unit : UnitEnum::tryFrom($unit);
 
@@ -22,32 +22,32 @@ trait Unit
         return $this;
     }
 
-    public function perMinute(): self
+    public function perMinute(): static
     {
         return $this->unit(UnitEnum::Minute);
     }
 
-    public function hourly(): self
+    public function hourly(): static
     {
         return $this->unit(UnitEnum::Hour);
     }
 
-    public function daily(): self
+    public function daily(): static
     {
         return $this->unit(UnitEnum::Day);
     }
 
-    public function weekly(): self
+    public function weekly(): static
     {
         return $this->unit(UnitEnum::Week);
     }
 
-    public function monthly(): self
+    public function monthly(): static
     {
         return $this->unit(UnitEnum::Month);
     }
 
-    public function yearly(): self
+    public function yearly(): static
     {
         return $this->unit(UnitEnum::Year);
     }

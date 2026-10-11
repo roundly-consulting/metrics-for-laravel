@@ -30,7 +30,7 @@ trait Ranges
         return Period::toOptions()->all();
     }
 
-    public function range(Period|string $range, ?string $customRangeStart = null, ?string $customRangeEnd = null): self
+    public function range(Period|string $range, ?string $customRangeStart = null, ?string $customRangeEnd = null): static
     {
         $this->range = $range instanceof Period ? $range->value : $range;
 
@@ -46,7 +46,7 @@ trait Ranges
      * Resolve this metric's ranges — and label its trend buckets — in an explicit
      * timezone, overriding config('metrics.timezone') and the application timezone.
      */
-    public function timezone(?string $timezone): self
+    public function timezone(?string $timezone): static
     {
         $this->timezoneOverride = $timezone;
 

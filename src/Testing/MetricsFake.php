@@ -92,7 +92,7 @@ final class MetricsFake extends MetricsManager
         return $resolved;
     }
 
-    public function unregister(string $key): self
+    public function unregister(string $key): static
     {
         unset($this->canned[$key]);
 

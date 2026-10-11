@@ -6,6 +6,18 @@ All notable changes to `metrics-for-laravel` are documented in this file. The fo
 
 ## Unreleased
 
+### Fixed
+
+- Fluent setters return `static` instead of `self`. They live in traits on the abstract
+  `Metric` (and `Trend` / `Value` / `Progress`), so `self` meant that base class:
+  `Metrics::trend()->range('7d')->daily()` failed static analysis with "undefined method
+  `Metric::daily()`", and a metric class of your own lost its type after `->name()` or
+  `->range()`. Covers `range()`, `timezone()`, `name()`, `description()`, `prefix()`, `suffix()`,
+  `precision()`, the unit setters (`daily()` …), `compareTo()`, `withChangeAgainstPreviousPeriod()`,
+  `target()`, `shouldBeAvoided()`, and the manager's `register()` / `unregister()`, so
+  `Metrics::fake()->register(…)` stays a `MetricsFake`. A metric class that overrides one of
+  these with a `: self` return type must change it to `: static`.
+
 ## 1.1.1 - 2026-10-11
 
 ### Changed

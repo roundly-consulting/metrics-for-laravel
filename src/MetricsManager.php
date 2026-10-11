@@ -37,7 +37,7 @@ class MetricsManager
      *
      * @param  class-string<Metric>|Metric|Closure(): Metric  $metric
      */
-    public function register(string $key, string|Metric|Closure $metric): self
+    public function register(string $key, string|Metric|Closure $metric): static
     {
         $this->metrics[$key] = $metric;
 
@@ -47,7 +47,7 @@ class MetricsManager
     /**
      * Remove a metric from the registry. Removing a key that is not registered is a no-op.
      */
-    public function unregister(string $key): self
+    public function unregister(string $key): static
     {
         unset($this->metrics[$key]);
 

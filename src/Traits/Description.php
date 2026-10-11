@@ -8,7 +8,7 @@ trait Description
 {
     protected string $description = '';
 
-    public function description(string $description): self
+    public function description(string $description): static
     {
         $this->description = $description;
 

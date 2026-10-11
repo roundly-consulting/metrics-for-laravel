@@ -2,5 +2,7 @@ parameters:
     level: 7
     paths:
         - src
+        # Never-executed fixture: the fluent chains a consumer writes keep their concrete type.
+        - tests/PHPStan
     checkOctaneCompatibility: true
     checkModelProperties: true

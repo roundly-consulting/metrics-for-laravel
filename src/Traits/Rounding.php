@@ -12,7 +12,7 @@ trait Rounding
 
     protected RoundingMode $roundingMode = RoundingMode::HalfAwayFromZero;
 
-    public function precision(int $precision = 0, RoundingMode $mode = RoundingMode::HalfAwayFromZero): self
+    public function precision(int $precision = 0, RoundingMode $mode = RoundingMode::HalfAwayFromZero): static
     {
         $this->roundingPrecision = $precision;
         $this->roundingMode = $mode;

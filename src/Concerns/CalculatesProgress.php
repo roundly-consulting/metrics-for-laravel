@@ -16,14 +16,14 @@ trait CalculatesProgress
 
     protected bool $avoid = false;
 
-    public function target(float $target): self
+    public function target(float $target): static
     {
         $this->target = $target;
 
         return $this;
     }
 
-    public function shouldBeAvoided(bool $avoid = true): self
+    public function shouldBeAvoided(bool $avoid = true): static
     {
         $this->avoid = $avoid;
 

@@ -8,7 +8,7 @@ trait Name
 {
     protected string $name = '';
 
-    public function name(string $name): self
+    public function name(string $name): static
     {
         $this->name = $name;
 
