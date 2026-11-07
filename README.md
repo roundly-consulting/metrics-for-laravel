@@ -26,7 +26,7 @@ result comes back as clean JSON for any front-end — no admin panel required.
 
 ## Installation
 
-Requires PHP 8.4 and Laravel 12 or 13.
+Requires PHP 8.4 and Laravel 13.
 
 ```bash
 composer require roundly-consulting/metrics-for-laravel
